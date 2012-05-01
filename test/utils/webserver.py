@@ -97,7 +97,7 @@ def get_http_handler(**kwargs):
 
     Class = HTTPRequestHandler
 
-    # формирование параметров
+    # заполенение параметров
     Class.timeout = kwargs.pop('timeout', None)
     Class.response = kwargs.pop(
         'response',
