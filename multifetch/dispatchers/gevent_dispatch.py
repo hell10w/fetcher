@@ -13,7 +13,7 @@ patch_all(thread=False)
 
 class GreenletDispatcher(BaseDispatcher):
     def __init__(self, **kwargs):
-        super(GreenletDispatcher, self).__init__(**kwargs)
+        super(GreenletDispatcher, self).__init__()
         self._pool = Pool(kwargs.pop('threads_count', 10))
         self._finished_tasks = []
 

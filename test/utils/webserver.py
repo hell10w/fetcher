@@ -51,7 +51,6 @@ class WebServer(gevent.Greenlet):
         patch_thread()
         self.httpd.shutdown()
         self.httpd.server_close()
-        self.join()
 
     def setup(self, **kwargs):
         for key, value in kwargs.iteritems():

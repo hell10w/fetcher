@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 class BaseDispatcher(object):
+    def __init__(self, **kwargs):
+        super(BaseDispatcher, self).__init__()
+
     def process_task(self, task):
         '''Стартует асинхронное выполнение задачи'''
         pass

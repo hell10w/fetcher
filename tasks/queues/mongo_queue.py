@@ -18,7 +18,7 @@ class MongoQueue(Queue):
         self.clear_on_init = kwargs.pop('clear_on_init', False)
         self.clear_on_del = kwargs.pop('clear_on_del', False)
 
-        Queue.__init__(self, **kwargs)
+        Queue.__init__(self, maxsize=kwargs.pop('maxsize', 0))
 
     def __del__(self):
         if self.clear_on_del:

@@ -2,4 +2,5 @@ from Queue import PriorityQueue
 
 
 class MemoryQueue(PriorityQueue):
-    pass
+    def __init__(self, **kwargs):
+        super(BaseDispatcher, self).__init__()
