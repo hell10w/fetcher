@@ -3,7 +3,7 @@
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 
 import gevent
-from gevent.monkey import patch_all
+from gevent.monkey import patch_all, patch_thread
 
 
 patch_all(thread=False)
@@ -48,9 +48,10 @@ class WebServer(gevent.Greenlet):
         gevent.sleep()
 
     def stop(self):
+        patch_thread()
         self.httpd.shutdown()
-        del self.httpd
-        self.kill()
+        self.httpd.server_close()
+        self.join()
 
     def setup(self, **kwargs):
         for key, value in kwargs.iteritems():

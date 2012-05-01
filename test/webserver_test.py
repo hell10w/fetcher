@@ -22,6 +22,20 @@ class Test(TestCase):
         }
     )
 
+    def setUp(self):
+        self.server = WebServer(**self.options)
+        self.server.start()
+
+    def tearDown(self):
+        self.server.stop()
+
+    '''def setUpClass(self):
+        self.server = WebServer(**self.options)
+        self.server.start()
+
+    def tearDownClass(self):
+        self.server.stop()'''
+
     def check_request(self, func, url, count=5, check_response={}):
         '''Проверка запросов'''
 
@@ -42,12 +56,7 @@ class Test(TestCase):
             status_code=200
         )
 
-        server = WebServer(**self.options)
-        server.start()
-
-        self.check_request(requests.get, server.url, check_response=correct_response)
-
-        server.stop()
+        self.check_request(requests.get, self.server.url, check_response=correct_response)
 
     def test_post(self):
         '''Проверка POST-запросов'''
@@ -57,12 +66,7 @@ class Test(TestCase):
             status_code=200
         )
 
-        server = WebServer(**self.options)
-        server.start()
-
-        self.check_request(requests.post, server.url, check_response=correct_response)
-
-        server.stop()
+        self.check_request(requests.post, self.server.url, check_response=correct_response)
 
     def test_response_callback(self):
         '''Проверка возможности перенастройки сервера и callback для формирования ответа сервера'''
@@ -73,19 +77,14 @@ class Test(TestCase):
         def response_checker(response):
             self.assertEqual(response.content, ANSWER)
 
-        server = WebServer(**self.options)
-        server.start()
-
-        server.setup(
+        self.server.setup(
             response=dict(
                 get=REQUEST,
                 post=REQUEST
             )
         )
 
-        self.check_request(requests.get, server.url, check_response=response_checker)
-
-        server.stop()
+        self.check_request(requests.get, self.server.url, check_response=response_checker)
 
 
 if __name__ == "__main__":
