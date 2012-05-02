@@ -41,9 +41,7 @@ class Test(TestCase):
                 #order.append(task)
 
         worker = Worker(
-            threads_count=COUNT,
-            sdfsdf=1,
-            sdfsdfww=23
+            threads_count=1
         )
 
         tasks = range(COUNT)
@@ -59,7 +57,7 @@ class Test(TestCase):
 
         worker.start()
 
-        self.assertListEqual(range(10), worker.order)
+        self.assertListEqual(range(COUNT), worker.order)
 
 
 if __name__ == "__main__":
