@@ -11,6 +11,7 @@ class MultiFetcher(object):
         '''
         Конструктор менеджера асинхроной работы.
         Параметры:
+            fetcher_transport - Транспорт для запросов
             dispatcher_type - Тип диспетчера задач
             queue_transport - Вид размещения очереди задач
         '''

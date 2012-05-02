@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-from transport.requests_transport import Fetcher
+from transport import get_fetcher_transport
