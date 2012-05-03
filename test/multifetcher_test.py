@@ -38,7 +38,7 @@ class Test(TestCase):
             def task_foo(self, task):
                 #print task.response.body
                 self.order.append(task.index)
-                print task.response.body.name
+                #print task.response.body.name
                 #order.append(task)
 
         worker = Worker(
