@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from queues import get_tasks_queue
-from fetcher.response import Response
+from fetcher.response import Request, Response
 
 
 class Task(object):
@@ -9,11 +9,15 @@ class Task(object):
 
     def __init__(self, **kwarg):
         self.response = Response()
+        self.request = Request()
         self.setup(**kwarg)
 
     def setup(self, **kwarg):
         for name, value in kwarg.iteritems():
-            setattr(self, name, value)
+            if hasattr(self.request, name):
+                setattr(self.request, name, value)
+            else:
+                setattr(self, name, value)
 
     def process_response(self):
         # TODO: здесь нужно присовокупить все нужные параметры

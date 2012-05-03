@@ -8,10 +8,12 @@ class TempFile(object):
 
     def __init__(self):
         self.file = NamedTemporaryFile(prefix='fetcher', delete=False)
+        self.name = self.file.name
+        self.file.close()
 
 
 class Response(object):
-    '''Класс ответа сервера'''
+    '''Ответ сервера'''
 
     status_code = None
     url = None
@@ -25,12 +27,22 @@ class Response(object):
 
 
 class Request(object):
-    '''Класс для хранения запроса серверу'''
+    '''Запроса серверу'''
 
-    method = 'get'
+    method = 'GET'
     url = None
     additional_headers = {}
+    cookies = {}
     body = None
+
+    allow_redirects = True
+    max_redirects = 3
+
+    proxies = {
+        'http': None,
+        'https': None
+    }
+    timeout = None
 
     def __init__(self, **kwargs):
         for key, value in kwargs.iteritems():
