@@ -8,8 +8,10 @@ from fetcher.useragents import get_user_agent
 
 
 class RequestsFetcher(BaseFetcher):
+    session = requests.session()
+
     default_options = dict(
-        #prefetch=False,
+        prefetch=False,
         method='GET',
         headers={
             'User-Agent': get_user_agent(),
@@ -104,7 +106,9 @@ class RequestsFetcher(BaseFetcher):
 
     def request(self):
         '''Выполняет запроса'''
-
-        _request = requests.Request(**self._options)
-        _request.send()
-        self._response = _request.response
+        
+        self._response = RequestsFetcher.session.request(
+            method=self._options.pop('method'),
+            url=self._options.pop('url'),
+            **self._options
+        )

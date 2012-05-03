@@ -28,10 +28,10 @@ class Worker(MultiFetcher):
         for url in URLS:
             self.tasks.add_task(
                 url=url,
-                handler=self.on_finded
+                handler='finded'
             )
 
-    def on_finded(self, task):
+    def task_finded(self, task):
         #print task, task.response.status_code,
         #if task.response.body:
         #    print task.url, task.response.body.split('<title>', 1)[1].split('</title>', 1)[0]
