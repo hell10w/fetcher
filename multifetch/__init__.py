@@ -33,6 +33,8 @@ class MultiFetcher(object):
 
         self._should_stop = False
 
+        self._process_for_tasks(self.tasks_generator)
+
         while not self._should_stop:
             while not self.dispatcher.is_full() and not self.tasks.empty():
                 _, task = self.tasks.get_task()
