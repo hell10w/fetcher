@@ -8,6 +8,8 @@ from fetcher.useragents import get_user_agent
 
 
 class RequestsFetcher(BaseFetcher):
+    '''Транспорт для запросов на библиотеке requests'''
+
     session = requests.session()
 
     default_options = dict(
@@ -65,27 +67,47 @@ class RequestsFetcher(BaseFetcher):
     def process_to_task(self, task):
         '''Возвращает результат выполнения запроса в задачу'''
 
-        # TODO: что делать с кодировкой
-        # в self._response.encoding хранится кодиравка документа
-
+        # сохранение основных параметров ответа
         task.response.status_code = self._response.status_code
         task.response.url = self._response.url
         task.response.cookies = self._response.cookies
         task.response.headers = self._response.headers
 
+        # кодировка документа
         task.response.encoding = self._response.encoding
 
-        if int(self._response.headers.get('Content-Length', 0)) > 10 * 1024:
+        # опредедение места сохранения ответа сервера
+        destination = self.MEMORY_RESPONSE_BODY
+
+        if self.response_body_destination == self.AUTO_RESPONSE_BODY:
+            content_length = int(self._response.headers.get('Content-Length', 0))
+            if content_length > self.file_cache_size:
+                destination = self.FILE_RESPONSE_BODY
+            else:
+                destination = self.MEMORY_RESPONSE_BODY
+        elif self.response_body_destination == self.FILE_RESPONSE_BODY:
+            destination = self.FILE_RESPONSE_BODY
+        elif self.response_body_destination == self.MEMORY_RESPONSE_BODY:
+            destination = self.MEMORY_RESPONSE_BODY
+
+        # сохранение ответа сервера
+        if destination == self.FILE_RESPONSE_BODY:
             task.response.body = TempFile()
-            for block in self._response.iter_content():
+            data_iterator = self._response.iter_content(
+                chunk_size=RequestsFetcher.body_download_chunk,
+                decode_unicode=True
+            )
+            for block in data_iterator:
                 task.response.body.write(block)
-        else:
+        elif destination == self.MEMORY_RESPONSE_BODY:
             task.response.body = self._response.content
 
+        # применение параметров из ответа на запрос к таску, чтобы
+        # можно было использовать в дальнейшем, например, куки
         task.process_response()
 
     def request(self):
-        '''Выполняет запроса'''
+        '''Выполняет запрос'''
 
         self._response = RequestsFetcher.session.request(
             method=self._options.pop('method'),

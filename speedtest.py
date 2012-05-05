@@ -24,8 +24,8 @@ def generate_string():
 URLS = ['http://google.ru/'+generate_string() for _ in range(URLS_COUNT)]
 
 
-def timeit(function, *args, **kwargs):
-    COUNT = TESTS_COUNT
+def timeit(function, count=None, *args, **kwargs):
+    COUNT = count or TESTS_COUNT
     elapsed = 0
     for _ in xrange(COUNT):
         started = time()
@@ -83,7 +83,7 @@ if False:
 def worker_spider():
     class Worker(Spider):
         def task_generator(self):
-            for _ in xrange(500):
+            for _ in xrange(1500):
                 yield Task(url='http://localhost')
 
         def task_initial(self, grab, task):
@@ -98,22 +98,23 @@ def worker_spider():
 def worker_fetcher():
     class Fetcher(MultiFetcher):
         def __init__(self, **kwargs):
-            kwargs.setdefault('queue_transport', 'memory')
+            #kwargs.setdefault('queue_transport', 'memory')
             kwargs.setdefault('threads_count', 30)
 
             super(Fetcher, self).__init__(**kwargs)
 
-            for _ in xrange(500):
+            for _ in xrange(1500):
                 self.tasks.add_task(url='http://localhost')
 
     fecher = Fetcher()
     fecher.start()
 
 
-#timeit(worker_spider)
+timeit(worker_spider, count=1)
 #timeit(worker_fetcher)
 
-import cProfile
-cProfile.run('worker_spider()')
+#import cProfile
+#cProfile.run('worker_spider()')
+#cProfile.run('worker_fetcher()')
 
 

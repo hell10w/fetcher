@@ -31,11 +31,11 @@ class MultiFetcher(object):
     def start(self):
         '''Стартует работу менеджера'''
 
-        self._should_stop = False
-
-        #self._process_for_tasks(self.tasks_generator)
-
         try:
+            self._should_stop = False
+
+            self._process_for_tasks(self.tasks_generator)
+
             while not self._should_stop:
                 while not self.dispatcher.is_full() and not self.tasks.empty():
                     _, task = self.tasks.get_task()
@@ -49,14 +49,13 @@ class MultiFetcher(object):
                 for finished_task in self.dispatcher.finished_tasks():
                     self._process_finished_task(finished_task)
 
-                #self._process_for_tasks(self.tasks_generator)
+                self._process_for_tasks(self.tasks_generator)
         except KeyboardInterrupt:
             pass
 
     def stop(self):
         '''Останавливает работу менеджера'''
         self._should_stop = True
-
 
     def tasks_generator(self):
         '''Генератор задач выполняемый при каждом выполнении хотя бы одной задачи'''
