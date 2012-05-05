@@ -6,19 +6,16 @@ import requests
 import gevent
 from gevent.monkey import patch_all
 
-from grab.spider import Spider
+from grab.spider import Spider, Task
 
 from multifetch import MultiFetcher
-#from test.utils.webserver import WebServer
 
 patch_all(thread=False)
 
 
-TESTS_COUNT = 10
+TESTS_COUNT = 5
 URLS_COUNT = 10
 
-#server = WebServer(port=8080)
-#server.start()
 
 def generate_string():
     return ''.join([choice(ascii_letters) for _ in range(20)])
@@ -77,8 +74,46 @@ def test_multifetcher():
     fetcher.start()
 
 
-timeit(test_gevent)
-timeit(test_multifetcher)
-timeit(test_grab)
+if False:
+    timeit(test_gevent)
+    timeit(test_multifetcher)
+    timeit(test_grab)
 
-#server.stop()
+
+def worker_spider():
+    class Worker(Spider):
+        def task_generator(self):
+            for _ in xrange(500):
+                yield Task(url='http://localhost')
+
+        def task_initial(self, grab, task):
+            pass
+
+    worker = Worker(
+        thread_number=30
+    )
+    worker.run()
+
+
+def worker_fetcher():
+    class Fetcher(MultiFetcher):
+        def __init__(self, **kwargs):
+            kwargs.setdefault('queue_transport', 'memory')
+            kwargs.setdefault('threads_count', 30)
+
+            super(Fetcher, self).__init__(**kwargs)
+
+            for _ in xrange(500):
+                self.tasks.add_task(url='http://localhost')
+
+    fecher = Fetcher()
+    fecher.start()
+
+
+#timeit(worker_spider)
+#timeit(worker_fetcher)
+
+import cProfile
+cProfile.run('worker_spider()')
+
+

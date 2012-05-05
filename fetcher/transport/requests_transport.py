@@ -73,10 +73,14 @@ class RequestsFetcher(BaseFetcher):
         task.response.cookies = self._response.cookies
         task.response.headers = self._response.headers
 
-        task.response.body = TempFile()
-        with open(task.response.body.name, 'wb') as dump:
+        task.response.encoding = self._response.encoding
+
+        if int(self._response.headers.get('Content-Length', 0)) > 10 * 1024:
+            task.response.body = TempFile()
             for block in self._response.iter_content():
-                dump.write(block)
+                task.response.body.write(block)
+        else:
+            task.response.body = self._response.content
 
         task.process_response()
 

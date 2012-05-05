@@ -33,22 +33,25 @@ class MultiFetcher(object):
 
         self._should_stop = False
 
-        self._process_for_tasks(self.tasks_generator)
+        #self._process_for_tasks(self.tasks_generator)
 
-        while not self._should_stop:
-            while not self.dispatcher.is_full() and not self.tasks.empty():
-                _, task = self.tasks.get_task()
-                self.dispatcher.process_task(task)
+        try:
+            while not self._should_stop:
+                while not self.dispatcher.is_full() and not self.tasks.empty():
+                    _, task = self.tasks.get_task()
+                    self.dispatcher.process_task(task)
 
-            if self.dispatcher.is_empty():
-                break
+                if self.dispatcher.is_empty():
+                    break
 
-            self.dispatcher.wait_available()
+                self.dispatcher.wait_available()
 
-            for finished_task in self.dispatcher.finished_tasks():
-                self._process_finished_task(finished_task)
+                for finished_task in self.dispatcher.finished_tasks():
+                    self._process_finished_task(finished_task)
 
-            self._process_for_tasks(self.tasks_generator)
+                #self._process_for_tasks(self.tasks_generator)
+        except KeyboardInterrupt:
+            pass
 
     def stop(self):
         '''Останавливает работу менеджера'''
