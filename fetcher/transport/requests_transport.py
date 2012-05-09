@@ -4,7 +4,6 @@ import requests
 
 from empty_transport import BaseFetcher
 from fetcher.response import TempFile
-from fetcher.useragents import get_user_agent
 
 
 class RequestsFetcher(BaseFetcher):
@@ -16,7 +15,6 @@ class RequestsFetcher(BaseFetcher):
         prefetch=False,
         method='GET',
         headers={
-            'User-Agent': get_user_agent(),
             'Accept-Charset': 'utf-8'
         }
     )
@@ -46,7 +44,9 @@ class RequestsFetcher(BaseFetcher):
         overload_config['method'] = task.request.method
         overload_config['url'] = task.request.url
         overload_config['cookies'] = task.request.cookies
-        overload_config['headers'] = task.request.additional_headers
+        overload_config['headers'] = {'User-Agent': task.request.user_agent}
+        overload_config['headers'].update(task.request.additional_headers)
+
         overload_config['allow_redirects'] = task.request.allow_redirects
         # TODO: может это не глобальный конфиг
         overload_config['config'] = {'max_redirects': task.request.max_redirects}

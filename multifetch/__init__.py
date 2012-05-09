@@ -61,10 +61,17 @@ class MultiFetcher(object):
         '''Генератор задач выполняемый при каждом выполнении хотя бы одной задачи'''
         yield None
 
+    def tasks_collector(self, task):
+        yield None
+
     def _process_finished_task(self, task):
         '''Передача управление обработчику для каждого завершенного task'''
+        if not task:
+            return
         handler = getattr(task, 'handler', None)
-        if handler:
+        if not handler:
+            self._process_for_tasks(self.tasks_collector(task))
+        else:
             if type(handler) == str:
                 handler = getattr(self, 'task_%s' % handler, None)
             if callable(handler):

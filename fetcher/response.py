@@ -4,6 +4,8 @@ import os
 from tempfile import gettempdir
 import os.path
 
+from fetcher.useragents import get_user_agent
+
 
 class TempFile(object):
     '''Временный файл для хранения тела ответа сервера'''
@@ -19,7 +21,8 @@ class TempFile(object):
         path = kwargs.pop('path', gettempdir())
         self.name = os.path.join(
             path,
-            'fetcher%X-%X.temp' % (os.getpid(), TempFile.index)
+            'fetcher-%X' % (os.getpid()),
+            '%X.tmp' % (TempFile.index)
         )
         TempFile.index += 1
         self.delete_on_finish = kwargs.pop('delete_on_finish', True)
@@ -123,6 +126,7 @@ class Request(object):
     method = 'GET'
     url = None
     additional_headers = {}
+    user_agent = get_user_agent()
     cookies = {}
     body = None
 
@@ -133,6 +137,7 @@ class Request(object):
         'http': None,
         'https': None
     }
+    connection_timeout = None
     timeout = None
 
     def __init__(self, **kwargs):
