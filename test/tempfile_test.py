@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from random import shuffle
 from unittest import TestCase, main
 
-#from tasks.queues import get_tasks_queue
-#from tasks import Task
 from fetcher.temporaryfile import TempFile
 
 

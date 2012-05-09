@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from time import time
+
 from multifetch import MultiFetcher
 
 
@@ -12,16 +14,30 @@ class Worker(MultiFetcher):
         for _ in xrange(1000):
             self.tasks.add_task(
                 url='http://localhost',
-                index=_
+                index=_ + 1
             )
 
     def tasks_collector(self, task):
-        print self.index, task.index
-        self.index += 1
+        if task.index % 100 == 0:
+            print task.index,
 
 
-worker = Worker(
-    threads_count=20,
-    queue_transport='memory'
-)
-worker.start()
+def worker(queue_transport='memory', repeat=4):
+    elapsed = 0
+    for _ in range(repeat):
+        start = time()
+        worker = Worker(
+            threads_count=20,
+            queue_transport=queue_transport
+        )
+        worker.start()
+        elapsed += time() - start
+    print
+    print elapsed / repeat
+    print
+
+
+worker()
+worker(queue_transport='mongo')
+#worker(processes_count=2)
+#worker(processes_count=4)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from tasks import Task, Tasks
-from dispatchers import get_tasks_manager
+from multifetch.dispatcher import CurlDispatcher as Dispatcher
 
 
 class MultiFetcher(object):
@@ -20,17 +20,15 @@ class MultiFetcher(object):
         Конструктор менеджера асинхроной работы.
         Параметры:
             fetcher_transport - Транспорт для запросов
-            dispatcher_type - Тип диспетчера задач
             queue_transport - Вид размещения очереди задач
         '''
         #настройка диспетчера задач
-        self.dispatcher = get_tasks_manager(**kwargs)
+        self.dispatcher = Dispatcher(**kwargs)
         #создание очереди заданий
         self.tasks = Tasks(**kwargs)
 
     def start(self):
         '''Стартует работу менеджера'''
-
         try:
             self._should_stop = False
 
@@ -39,7 +37,8 @@ class MultiFetcher(object):
             while not self._should_stop:
                 while not self.dispatcher.is_full() and not self.tasks.empty():
                     _, task = self.tasks.get_task()
-                    self.dispatcher.process_task(task)
+                    if task:
+                        self.dispatcher.process_task(task)
 
                 if self.dispatcher.is_empty():
                     break
@@ -50,8 +49,15 @@ class MultiFetcher(object):
                     self._process_finished_task(finished_task)
 
                 self._process_for_tasks(self.tasks_generator)
+
+                self.info_handler()
+
         except KeyboardInterrupt:
             pass
+
+    def info_handler(self):
+        '''Вызывается на каждом проходе цикла'''
+        pass
 
     def stop(self):
         '''Останавливает работу менеджера'''
@@ -81,6 +87,6 @@ class MultiFetcher(object):
         '''Извлекает и добавляет в очередь задания из функции'''
         if not generator:
             return
-        for task in generator():
+        for task in generator() if callable(generator) else generator:
             if isinstance(task, Task):
                 self.tasks.add_task(task)

@@ -55,6 +55,10 @@ class Tasks(object):
         priority = getattr(task, 'priority', 100)
         self._queue.put((priority, task))
 
+    def size(self):
+        '''Размер очереди задач'''
+        return self._queue.qsize()
+
     def get_task(self):
         '''Извлекает задачу'''
         return self._queue.get()

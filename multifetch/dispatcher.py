@@ -2,16 +2,41 @@
 
 import pycurl
 
-from base_dispatch import BaseDispatcher
-from fetcher import get_fetcher_transport
+from fetcher import Fetcher
+
+
+class BaseDispatcher(object):
+    def __init__(self, **kwargs):
+        super(BaseDispatcher, self).__init__()
+
+    def process_task(self, task):
+        '''Стартует асинхронное выполнение задачи'''
+        pass
+
+    def is_empty(self):
+        '''Проверяет пустоту пула выполняемых задач'''
+        return True
+
+    def is_full(self):
+        '''Проверяет заполненность пула выполняемых задач'''
+        return False
+
+    def wait_available(self):
+        '''Проверяет выполненность задач в пуле'''
+        pass
+
+    def finished_tasks(self):
+        '''Генератор выполненных задач'''
+        pass
 
 
 class CurlDispatcher(BaseDispatcher):
+    '''Менеджер задач на основе CurlMulti'''
     def __init__(self, **kwargs):
         super(CurlDispatcher, self).__init__()
         #
         self.threads_count = kwargs.pop('threads_count', 20)
-        self._fetcher_class = get_fetcher_transport(**kwargs)
+        self._fetcher_class = Fetcher
         #
         self.multi_handle = pycurl.CurlMulti()
         self.multi_handle.handles = [
@@ -63,13 +88,13 @@ class CurlDispatcher(BaseDispatcher):
                 self.curls_pool.append(curl)
             # обработка сбойнувших Curl объектов
             for curl, errno, errmsg in failed_list:
-                self.multi_handle.remove_handle(curl)
                 # TODO: делать что-то со сбойнувшими
+                self.multi_handle.remove_handle(curl)
                 self.curls_pool.append(curl)
             #
             if num_q == 0:
                 break
-        self.multi_handle.select(1.0)
+        self.multi_handle.select(0.1)
 
     def process_finished_curl(self, curl):
         '''Обрабатывает таск из выполненного Curl объекта'''
@@ -83,4 +108,3 @@ class CurlDispatcher(BaseDispatcher):
         curl.fetcher = None
         #
         return task
-
