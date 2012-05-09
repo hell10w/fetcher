@@ -14,25 +14,33 @@ class TempFile(object):
         '''
         Параметры:
             path - путь где будет создан временный файл, по-умолчанию - временная папка
+            use_subdir - если True в path будет создана папка с именем PID
+            filename - имя файла
             delete_on_finish - удаление файла при завершении работы, по-умолчанию - True
         '''
         path = kwargs.pop('path', gettempdir())
-        self.name = os.path.join(
-            path,
-            'fetcher-%X' % (os.getpid()),
-            '%X.tmp' % (TempFile.index)
+        filename = kwargs.pop(
+            'filename',
+            '%X.tmp' % TempFile.index
         )
-        TempFile.index += 1
+
+        use_subdir = kwargs.pop('use_subdir', True)
+        subdir = 'fetcher-%X' % (os.getpid()) if use_subdir else ''
+
         self.delete_on_finish = kwargs.pop('delete_on_finish', True)
+
+        self.file = None
+        self.name = os.path.join(path, subdir, filename)
 
         self._open_file()
 
+        TempFile.index += 1
+
     def _open_file(self):
-        try:
-            if self.file:
-                return
-        finally:
+        if type(self.file) is file:
             return
+        path, _ = os.path.split(self.name)
+        os.mkdir(path)
         self.file = open(self.name, 'w+b')
 
     def _close_file(self):
@@ -46,7 +54,7 @@ class TempFile(object):
         self.file.seek(0, os.SEEK_END)
         self.file.write(data)
 
-    def read(self, size):
+    def read(self, size=None):
         '''
         Чтение файла
 
@@ -54,8 +62,18 @@ class TempFile(object):
         '''
         self._open_file()
         self.file.seek(0)
-        for data in self.file.read(size):
-            yield data
+
+        if not size:
+            return self.file.read()
+        else:
+            def generator():
+                while True:
+                    chunk = self.file.read(size)
+                    if chunk:
+                        yield chunk
+                    else:
+                        break
+            return generator()
 
     def move(self, path=None, name=None, create_path=True):
         '''
