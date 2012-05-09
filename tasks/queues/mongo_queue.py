@@ -64,15 +64,14 @@ class MongoQueue(Queue):
         self.collection.save(item)
 
     def _get(self):
-        priority, value = 0, None
-        try:
-            item = self.collection.find_and_modify(
-                sort={'priority': ASCENDING},
-                remove=True
-            )
-            priority = item.get('priority', 0)
-            value = item.get('value', None)
-            if value:
-                value = loads(value)
-        finally:
-            return (priority, value)
+        item = self.collection.find_and_modify(
+            sort={'priority': ASCENDING},
+            remove=True
+        )
+        if not item:
+            raise IndexError()
+        priority = item.get('priority', 0)
+        value = item.get('value', None)
+        if value:
+            value = loads(value)
+        return (priority, value)

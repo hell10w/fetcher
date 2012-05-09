@@ -2,7 +2,7 @@
 
 from time import time
 
-from multifetch import MultiFetcher
+from multifetch import MultiFetcher, MemoryQueue, MongoQueue
 
 
 class Worker(MultiFetcher):
@@ -22,13 +22,13 @@ class Worker(MultiFetcher):
             print task.index,
 
 
-def worker(queue_transport='memory', repeat=4):
+def worker(queue=MemoryQueue, repeat=4):
     elapsed = 0
     for _ in range(repeat):
         start = time()
         worker = Worker(
             threads_count=20,
-            queue_transport=queue_transport
+            queue=queue
         )
         worker.start()
         elapsed += time() - start
@@ -36,8 +36,7 @@ def worker(queue_transport='memory', repeat=4):
     print elapsed / repeat
     print
 
-
 worker()
-worker(queue_transport='mongo')
+worker(queue=MongoQueue)
 #worker(processes_count=2)
 #worker(processes_count=4)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from tasks import Task, Tasks
+from tasks import Task, Tasks, MemoryQueue, MongoQueue
 from multifetch.dispatcher import CurlDispatcher as Dispatcher
 
 

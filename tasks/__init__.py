@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from queues import get_tasks_queue
+from queues import MemoryQueue, MongoQueue
 from fetcher.queries import Request, Response
 
 
@@ -37,7 +37,7 @@ class Tasks(object):
                 Может принимать следующие значения: memory, mongo
         '''
 
-        self._queue = get_tasks_queue(**kwargs)
+        self._queue = kwargs.pop('queue', MongoQueue)(**kwargs)
 
     def add_task(self, task=None, **kwargs):
         '''
@@ -46,13 +46,16 @@ class Tasks(object):
         параметры к существующей
         '''
 
+        priority = kwargs.pop('priority', None) or \
+                   getattr(task, 'priority', None) or \
+                   100
+
         if len(kwargs) and task:
             for name, value in kwargs.iteritems():
                 setattr(task, name, value)
         if not task:
             task = Task(**kwargs)
 
-        priority = getattr(task, 'priority', 100)
         self._queue.put((priority, task))
 
     def size(self):
