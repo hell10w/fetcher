@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from queues import get_tasks_queue
-from fetcher.response import Request, Response
+from fetcher.queries import Request, Response
 
 
 class Task(object):

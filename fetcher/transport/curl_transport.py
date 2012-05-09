@@ -2,8 +2,8 @@
 
 import pycurl
 
-from empty_transport import BaseFetcher
-from fetcher.response import TempFile
+from base_transport import BaseFetcher
+from fetcher.temporaryfile import TempFile
 from fetcher.useragents import get_user_agent
 
 

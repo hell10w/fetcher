@@ -2,7 +2,7 @@
 
 import pycurl
 
-from empty_dispatch import BaseDispatcher
+from base_dispatch import BaseDispatcher
 from fetcher import get_fetcher_transport
 
 
