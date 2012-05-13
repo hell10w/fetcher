@@ -4,7 +4,7 @@ from unittest import TestCase, main
 
 import requests
 
-from utils.webserver import WebServer
+from fetcher.test.utils.webserver import WebServer
 
 
 class Test(TestCase):

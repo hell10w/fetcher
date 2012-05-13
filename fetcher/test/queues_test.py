@@ -3,8 +3,8 @@
 from random import shuffle
 from unittest import TestCase, main
 
-from tasks.queues import get_tasks_queue
-from tasks import Task
+from fetcher.tasks.queues import get_tasks_queue
+from fetcher.tasks import Task
 
 
 class Test(TestCase):

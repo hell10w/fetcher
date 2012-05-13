@@ -8,7 +8,7 @@ from gevent.monkey import patch_all
 
 from grab.spider import Spider, Task
 
-from multifetch import MultiFetcher
+from fetcher.multifetch import MultiFetcher
 
 patch_all(thread=False)
 

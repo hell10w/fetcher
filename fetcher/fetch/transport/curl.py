@@ -6,9 +6,9 @@ from Cookie import SimpleCookie
 
 import pycurl
 
-from fetcher.request import MEMORY_RESPONSE_BODY, FILE_RESPONSE_BODY
-from fetcher.temporaryfile import TempFile
-from fetcher.transport.base import BaseFetcher
+from fetcher.fetch.request import MEMORY_RESPONSE_BODY, FILE_RESPONSE_BODY
+from fetcher.fetch.temporaryfile import TempFile
+from fetcher.fetch.transport.base import BaseFetcher
 
 
 class CurlFetcher(BaseFetcher):

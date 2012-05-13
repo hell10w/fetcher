@@ -2,8 +2,8 @@
 
 import pycurl
 
-from fetcher import Fetcher
-from multifetch.dispatcher.base import BaseDispatcher
+from fetcher.fetch import Fetcher
+from fetcher.multifetch.dispatcher.base import BaseDispatcher
 
 
 class CurlDispatcher(BaseDispatcher):

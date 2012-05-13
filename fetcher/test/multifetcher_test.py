@@ -3,8 +3,8 @@
 from random import shuffle
 from unittest import TestCase, main
 
-from multifetch import MultiFetcher
-from utils.webserver import WebServer
+from fetcher.multifetch import MultiFetcher
+from fetcher.test.utils.webserver import WebServer
 
 #from tasks.queues import TasksQueue
 #from tasks import Task

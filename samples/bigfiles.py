@@ -1,4 +1,4 @@
-from multifetch import MultiFetcher
+from fetcher.multifetch import MultiFetcher
 
 
 class Worker(MultiFetcher):

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from fetcher.request import Request
+from fetcher.fetch.request import Request
 
-from queues import MemoryQueue, MongoQueue
-from fetcher.response import  Response
+from fetcher.tasks.queues import MemoryQueue, MongoQueue
+from fetcher.fetch.response import Response
 
 
 class Task(object):

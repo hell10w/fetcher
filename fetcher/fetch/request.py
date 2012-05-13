@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from fetcher.useragents import get_user_agent
+from fetcher.fetch.useragents import get_user_agent
 
 
-MEMORY_RESPONSE_BODY = 0    # сохранять ответа сервера в память
-FILE_RESPONSE_BODY = 1      # сохранять ответа сервера в файл
+MEMORY_RESPONSE_BODY = 0    # сохранять ответ сервера в память
+FILE_RESPONSE_BODY = 1      # сохранять ответ сервера в файл
 
 
 class Request(object):

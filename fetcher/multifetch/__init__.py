@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from tasks import Task, Tasks, MemoryQueue, MongoQueue
-from multifetch.dispatcher import Dispatcher
+from fetcher.tasks import Task, Tasks, MemoryQueue, MongoQueue
+from fetcher.multifetch.dispatcher import Dispatcher
 
 
 class MultiFetcher(object):
@@ -11,22 +11,23 @@ class MultiFetcher(object):
     О захламлении памяти можно не беспокоиться потому что:
         - очередь на основе mongodb может быть любого размера, она
             хранится в дисковом пространстве
-        - ответ на каждый запрос скачивается во временный файл через
-            буфер размером 10КБ
+        - ответ на каждый запрос скачивается во временный файл
     '''
 
     def __init__(self, **kwargs):
         '''
         Конструктор менеджера асинхроной работы.
         Параметры:
-            processes_count - Количество процессов
-            queue_transport - Вид размещения очереди задач
+            queue_transport - Контейнер задач
         '''
         self.dispatcher = Dispatcher(**kwargs)
         self.tasks = Tasks(**kwargs)
 
     def start(self):
         '''Стартует работу менеджера'''
+
+        self.on_start()
+
         try:
             self._should_stop = False
 
@@ -48,18 +49,28 @@ class MultiFetcher(object):
 
                 self._process_for_tasks(self.tasks_generator)
 
-                self.info_handler()
+                self.on_loop()
 
         except KeyboardInterrupt:
             pass
 
-    def info_handler(self):
-        '''Вызывается на каждом проходе цикла'''
-        pass
+        self.on_stop()
 
     def stop(self):
         '''Останавливает работу менеджера'''
         self._should_stop = True
+
+    def on_start(self):
+        '''Вызывается перед началом работы'''
+        pass
+
+    def on_stop(self):
+        '''Вызывается по завершении работы'''
+        pass
+
+    def on_loop(self):
+        '''Вызывается на каждом проходе цикла'''
+        pass
 
     def tasks_generator(self):
         '''Генератор задач выполняемый при каждом выполнении хотя бы одной задачи'''

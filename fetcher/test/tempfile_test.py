@@ -2,7 +2,7 @@
 
 from unittest import TestCase, main
 
-from fetcher.temporaryfile import TempFile
+from fetcher.fetch.temporaryfile import TempFile
 
 
 class Test(TestCase):

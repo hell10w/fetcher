@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from fetcher.temporaryfile import TempFile
+from fetcher.fetch.temporaryfile import TempFile
 
 
 class Response(object):
@@ -32,5 +32,3 @@ class Response(object):
                 yield block
         else:
             yield self.body
-
-

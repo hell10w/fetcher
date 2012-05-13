@@ -3,7 +3,7 @@ import multiprocessing
 import gevent
 import gevent.pool
 import requests
-from tasks.queues.mongo_queue import MongoQueue
+from fetcher.tasks.queues.mongo_queue import MongoQueue
 
 
 queue = MongoQueue()

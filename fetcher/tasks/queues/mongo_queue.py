@@ -8,7 +8,7 @@ from pymongo import Connection, ASCENDING
 from pymongo.binary import Binary
 from pymongo.errors import CollectionInvalid
 
-from errors import FetcherException
+from fetcher.errors import FetcherException
 
 
 class MongoQueue(Queue):
