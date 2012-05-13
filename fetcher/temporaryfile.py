@@ -36,6 +36,10 @@ class TempFile(object):
 
         TempFile.index += 1
 
+    def __del__(self):
+        if self.delete_on_finish:
+            os.remove(self.name)
+
     def _open_file(self):
         if type(self.file) is file:
             return

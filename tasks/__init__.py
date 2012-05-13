@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+from fetcher.request import Request
 
 from queues import MemoryQueue, MongoQueue
-from fetcher.queries import Request, Response
+from fetcher.response import  Response
 
 
 class Task(object):
@@ -13,6 +14,7 @@ class Task(object):
         self.setup(**kwarg)
 
     def setup(self, **kwarg):
+        '''Настройка параметров'''
         for name, value in kwarg.iteritems():
             if hasattr(self.request, name):
                 setattr(self.request, name, value)
@@ -20,10 +22,8 @@ class Task(object):
                 setattr(self, name, value)
 
     def process_response(self):
-        # TODO: здесь нужно присовокупить все нужные параметры
-        # из ответа, такие как куки, к Таску, в зависимости от
-        # настроек
-        pass
+        '''Подготовка будущего запроса исходя из ответа'''
+        self.request.cookies.update(self.response.cookies)
 
 
 class Tasks(object):

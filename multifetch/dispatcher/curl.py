@@ -3,47 +3,24 @@
 import pycurl
 
 from fetcher import Fetcher
-
-
-class BaseDispatcher(object):
-    def __init__(self, **kwargs):
-        super(BaseDispatcher, self).__init__()
-
-    def process_task(self, task):
-        '''Стартует асинхронное выполнение задачи'''
-        pass
-
-    def is_empty(self):
-        '''Проверяет пустоту пула выполняемых задач'''
-        return True
-
-    def is_full(self):
-        '''Проверяет заполненность пула выполняемых задач'''
-        return False
-
-    def wait_available(self):
-        '''Проверяет выполненность задач в пуле'''
-        pass
-
-    def finished_tasks(self):
-        '''Генератор выполненных задач'''
-        pass
+from multifetch.dispatcher.base import BaseDispatcher
 
 
 class CurlDispatcher(BaseDispatcher):
     '''Менеджер задач на основе CurlMulti'''
+
     def __init__(self, **kwargs):
         super(CurlDispatcher, self).__init__()
-        #
+
         self.threads_count = kwargs.pop('threads_count', 20)
-        self._fetcher_class = Fetcher
-        #
+
+        self.fetcher = Fetcher()
+
         self.multi_handle = pycurl.CurlMulti()
         self.multi_handle.handles = [
             pycurl.Curl()
             for _ in xrange(self.threads_count)
         ]
-        #
         self.curls_pool = self.multi_handle.handles[:]
 
     def __del__(self):
@@ -53,12 +30,11 @@ class CurlDispatcher(BaseDispatcher):
 
     def process_task(self, task):
         '''Стартует асинхронное выполнение задачи'''
-        #
         curl = self.curls_pool.pop()
-        #
-        fetcher = self._fetcher_class(curl=curl)
-        fetcher.prepare_from_task(task)
-        #
+
+        self.fetcher.prepare_from_task(task, curl=curl)
+        curl.task = task
+
         self.multi_handle.add_handle(curl)
 
     def is_empty(self):
@@ -80,31 +56,25 @@ class CurlDispatcher(BaseDispatcher):
         '''Генератор выполненных задач'''
         while True:
             # извлечение информации о выполненных и сбойнувших Curl объектах
-            num_q, success_list, failed_list = self.multi_handle.info_read()
+            queue_size, success_list, failed_list = self.multi_handle.info_read()
             # обработка выполненных Curl объектов
             for curl in success_list:
                 yield  self.process_finished_curl(curl)
                 self.multi_handle.remove_handle(curl)
                 self.curls_pool.append(curl)
             # обработка сбойнувших Curl объектов
-            for curl, errno, errmsg in failed_list:
+            for curl, error_number, error_message in failed_list:
                 # TODO: делать что-то со сбойнувшими
                 self.multi_handle.remove_handle(curl)
                 self.curls_pool.append(curl)
             #
-            if num_q == 0:
+            if queue_size == 0:
                 break
         self.multi_handle.select(0.1)
 
     def process_finished_curl(self, curl):
         '''Обрабатывает таск из выполненного Curl объекта'''
-        #
         task = curl.task
-        fetcher = curl.fetcher
-        #
-        fetcher.process_to_task(task)
-        #
+        self.fetcher.process_to_task(task, curl=curl)
         curl.task = None
-        curl.fetcher = None
-        #
         return task

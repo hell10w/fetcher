@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-from transport import CurlFetcher as Fetcher
+from transport import Fetcher

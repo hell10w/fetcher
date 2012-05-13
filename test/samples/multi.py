@@ -27,7 +27,7 @@ def worker(queue=MemoryQueue, repeat=4):
     for _ in range(repeat):
         start = time()
         worker = Worker(
-            threads_count=20,
+            threads_count=40,
             queue=queue
         )
         worker.start()
@@ -36,7 +36,15 @@ def worker(queue=MemoryQueue, repeat=4):
     print elapsed / repeat
     print
 
+'''worker = Worker(
+    threads_count=20,
+    queue=MemoryQueue
+)
+worker.start()'''
+
 worker()
 worker(queue=MongoQueue)
+
+
 #worker(processes_count=2)
 #worker(processes_count=4)

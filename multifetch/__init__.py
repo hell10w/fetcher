@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from tasks import Task, Tasks, MemoryQueue, MongoQueue
-from multifetch.dispatcher import CurlDispatcher as Dispatcher
+from multifetch.dispatcher import Dispatcher
 
 
 class MultiFetcher(object):
@@ -19,12 +19,10 @@ class MultiFetcher(object):
         '''
         Конструктор менеджера асинхроной работы.
         Параметры:
-            fetcher_transport - Транспорт для запросов
+            processes_count - Количество процессов
             queue_transport - Вид размещения очереди задач
         '''
-        #настройка диспетчера задач
         self.dispatcher = Dispatcher(**kwargs)
-        #создание очереди заданий
         self.tasks = Tasks(**kwargs)
 
     def start(self):
