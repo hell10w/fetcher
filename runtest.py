@@ -4,6 +4,7 @@ import unittest
 TEST_CASE_LIST = (
     'test.webserver_test',
     'test.queues_test',
+    'test.tempfile_test',
     'test.multifetcher_test'
 )
 

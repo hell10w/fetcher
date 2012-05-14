@@ -8,7 +8,7 @@ from gevent.monkey import patch_all
 
 from grab.spider import Spider, Task
 
-from multifetch import MultiFetcher
+from fetcher.multifetch import MultiFetcher
 
 patch_all(thread=False)
 
@@ -98,7 +98,7 @@ def worker_spider():
 def worker_fetcher():
     class Fetcher(MultiFetcher):
         def __init__(self, **kwargs):
-            #kwargs.setdefault('queue_transport', 'memory')
+            kwargs.setdefault('queue_transport', 'memory')
             kwargs.setdefault('threads_count', 30)
 
             super(Fetcher, self).__init__(**kwargs)
@@ -110,8 +110,8 @@ def worker_fetcher():
     fecher.start()
 
 
-timeit(worker_spider, count=1)
-#timeit(worker_fetcher)
+timeit(worker_fetcher)
+timeit(worker_spider)
 
 #import cProfile
 #cProfile.run('worker_spider()')
