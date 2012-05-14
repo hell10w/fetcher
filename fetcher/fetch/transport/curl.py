@@ -36,26 +36,35 @@ class CurlFetcher(BaseFetcher):
         curl.setopt(pycurl.CONNECTTIMEOUT, task.request.connection_timeout or 0)
         curl.setopt(pycurl.TIMEOUT, task.request.overall_timeout or 0)
 
+        print task.request.url
         curl.setopt(pycurl.URL, task.request.url)
 
         task.request.method = task.request.method.upper()
 
         if task.request.method == 'GET':
             curl.setopt(pycurl.HTTPGET, 1)
+            if task.request.post:
+                # TODO: делать правильный join
+                # TODO: убрать эту пляску в расширение
+                curl.setopt(pycurl.URL, task.request.url + '?' + urlencode(task.request.post))
+                task.request.post = None
         elif task.request.method == 'POST':
             curl.setopt(pycurl.POST, 1)
             if not task.request.post:
                 post_fields = ''
             else:
                 post_fields = urlencode(task.request.post)
+                task.request.post = None
             curl.setopt(pycurl.POSTFIELDS, post_fields)
             # TODO: добавить multipart и проверить POST-метод
         elif task.request.method == 'PUT':
             curl.setopt(pycurl.PUT, 1)
-            if isinstance(task.request.post, file):
-                read_function = task.request.post.read
-            else:
-                read_function = StringIO(task.request.post).read
+            if task.request.post:
+                if isinstance(task.request.post, file):
+                    read_function = task.request.post.read
+                else:
+                    read_function = StringIO(task.request.post).read
+                task.request.post = None
             curl.setopt(pycurl.READFUNCTION, read_function)
             # TODO: проверить PUT-метод для файлов и всего остального
         elif task.request.method == 'DELETE':
@@ -121,9 +130,13 @@ class CurlFetcher(BaseFetcher):
 
         task.response.headers = {}
         if task.response.header_chunks:
-            for line in task.response.header_chunks[1:-1]:
-                key, value = line.strip().split(': ', 1)
-                task.response.headers[key] = value
+            for line in task.response.header_chunks[::-1]:
+                line = line.strip()
+                if line.startswith('HTTP/'):
+                    break
+                elif line:
+                    key, value = line.split(': ', 1)
+                    task.response.headers.setdefault(key, []).append(value)
 
         if task.request.body_destination == MEMORY_RESPONSE_BODY:
             task.response.body = ''.join(task.response.body)

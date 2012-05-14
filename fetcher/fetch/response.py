@@ -21,6 +21,13 @@ class Response(object):
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
 
+    def get_body(self):
+        '''Возвращает тело ответа целиком'''
+        body = ''
+        for chunk in self.read_body():
+            body += chunk or ''
+        return body
+
     def read_body(self, block_size=None):
         '''
         Чтение тела ответа сервера
