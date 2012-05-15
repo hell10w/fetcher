@@ -39,3 +39,11 @@ class Response(object):
                 yield block
         else:
             yield self.body
+
+    def browse(self):
+        '''Открывает в браузере документ'''
+
+        # TODO: это
+        #fh, path = tempfile.mkstemp()
+        #self.save(path)
+        #webbrowser.open('file://' + path)

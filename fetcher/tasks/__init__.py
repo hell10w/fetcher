@@ -22,6 +22,7 @@ class Task(Extensions):
 
     def clone(self):
         '''Возвращает копию таска'''
+        # TODO: правильно копировать response и request
         kargs = dict(
             (key, value)
             for key, value in self.__dict__.iteritems()
@@ -33,6 +34,8 @@ class Task(Extensions):
         '''Подготовка будущего запроса исходя из ответа'''
         self.request.url = self.response.url
         self.request.cookies.update(self.response.cookies)
+        self.request.post = None
+        self.request.is_multipart_post = False
 
 
 class Tasks(object):

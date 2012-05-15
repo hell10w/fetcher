@@ -12,11 +12,17 @@ class Request(object):
 
     method = 'GET'
     url = None
-    additional_headers = {}
+    additional_headers = {
+        'Accept-Language': 'en-us,en;q=0.9',
+        'Accept-Charset': 'utf-8',
+        'Keep-Alive': '300',
+        'Expect': '',
+    }
     user_agent = get_user_agent()
     referer = None
     cookies = {}
     post = None
+    is_multipart_post = False
 
     allow_redirects = True
     max_redirects = 3
