@@ -36,27 +36,24 @@ class CurlFetcher(BaseFetcher):
         curl.setopt(pycurl.CONNECTTIMEOUT, task.request.connection_timeout or 0)
         curl.setopt(pycurl.TIMEOUT, task.request.overall_timeout or 0)
 
-        print task.request.url
         curl.setopt(pycurl.URL, task.request.url)
 
         task.request.method = task.request.method.upper()
 
+        # TODO: после настройки curl все задействованые параметры из task.request должны быть удалены
+        # TODO: конфигурирование task.request.post и task.request.url дожно делать в расширении ответственном за формы
+
+        if task.request.post:
+            if not task.request.is_multipart_post:
+                curl.setopt(pycurl.POSTFIELDS, task.request.post or '')
+            else:
+                curl.setopt(pycurl.HTTPPOST, task.request.post or '')
+
         if task.request.method == 'GET':
             curl.setopt(pycurl.HTTPGET, 1)
-            if task.request.post:
-                # TODO: делать правильный join
-                # TODO: убрать эту пляску в расширение
-                curl.setopt(pycurl.URL, task.request.url + '?' + urlencode(task.request.post))
-                task.request.post = None
         elif task.request.method == 'POST':
             curl.setopt(pycurl.POST, 1)
-            if not task.request.post:
-                post_fields = ''
-            else:
-                post_fields = urlencode(task.request.post)
-                task.request.post = None
-            curl.setopt(pycurl.POSTFIELDS, post_fields)
-            # TODO: добавить multipart и проверить POST-метод
+            # TODO: проверить POST
         elif task.request.method == 'PUT':
             curl.setopt(pycurl.PUT, 1)
             if task.request.post:
@@ -101,7 +98,7 @@ class CurlFetcher(BaseFetcher):
             curl.setopt(pycurl.PROXY, '')
         else:
             curl.setopt(pycurl.PROXY, task.request.proxy)
-            proxy_type = task.request.proxy or 'HTTP'
+            proxy_type = task.request.proxy_type or 'HTTP'
             proxy_type = getattr(pycurl, 'PROXYTYPE_%s' % proxy_type.upper())
             curl.setopt(pycurl.PROXYTYPE, proxy_type)
             curl.setopt(pycurl.PROXYUSERPWD, task.request.proxy_auth or '')

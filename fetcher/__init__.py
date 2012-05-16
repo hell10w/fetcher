@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-from multifetch import MultiFetcher, MemoryQueue, MongoQueue, Task
+from multifetch import MultiFetcher, MemoryQueue, MongoQueue, Task, Request

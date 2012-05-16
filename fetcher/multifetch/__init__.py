@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from fetcher.tasks import Task, Tasks, MemoryQueue, MongoQueue
+from fetcher.fetch import Request
 from fetcher.multifetch.dispatcher import Dispatcher
 
 
