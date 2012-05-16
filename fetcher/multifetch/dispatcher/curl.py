@@ -4,6 +4,7 @@ import pycurl
 
 from fetcher.fetch import Fetcher
 from fetcher.multifetch.dispatcher.base import BaseDispatcher
+from fetcher.errors import TimeoutError, ConnectionError, AuthError, NetworkError
 
 
 class CurlDispatcher(BaseDispatcher):
@@ -59,14 +60,21 @@ class CurlDispatcher(BaseDispatcher):
             queue_size, success_list, failed_list = self.multi_handle.info_read()
             # обработка выполненных Curl объектов
             for curl in success_list:
-                yield  self.process_finished_curl(curl)
-                self.multi_handle.remove_handle(curl)
-                self.curls_pool.append(curl)
+                yield  self.process_finished_curl(curl), None
             # обработка сбойнувших Curl объектов
-            for curl, error_number, error_message in failed_list:
-                # TODO: делать что-то со сбойнувшими
-                self.multi_handle.remove_handle(curl)
-                self.curls_pool.append(curl)
+            for curl, error_code, error_message in failed_list:
+                error = None
+                if error_code == pycurl.E_WRITE_ERROR:
+                    pass
+                elif error_code == pycurl.E_OPERATION_TIMEOUTED:
+                    error = TimeoutError(error_code, error_message)
+                elif error_code == pycurl.E_COULDNT_CONNECT:
+                    error = ConnectionError(error_code, error_message)
+                elif error_code == pycurl.E_LOGIN_DENIED:
+                    error = AuthError(error_code, error_message)
+                else:
+                    error = NetworkError(error_code, error_message)
+                yield self.process_failed_curl(curl), error
             #
             if queue_size == 0:
                 break
@@ -77,4 +85,14 @@ class CurlDispatcher(BaseDispatcher):
         task = curl.task
         self.fetcher.process_to_task(task, curl=curl)
         curl.task = None
+        self.multi_handle.remove_handle(curl)
+        self.curls_pool.append(curl)
+        return task
+
+    def process_failed_curl(self, curl):
+        '''Возвращает таск из сбойнувшего Curl объекта'''
+        task = curl.task
+        curl.task = None
+        self.multi_handle.remove_handle(curl)
+        self.curls_pool.append(curl)
         return task
