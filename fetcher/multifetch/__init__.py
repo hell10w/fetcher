@@ -45,8 +45,8 @@ class MultiFetcher(object):
 
                 self.dispatcher.wait_available()
 
-                for finished_task in self.dispatcher.finished_tasks():
-                    self._process_finished_task(finished_task)
+                for finished_task, error in self.dispatcher.finished_tasks():
+                    self._process_finished_task(finished_task, error)
 
                 self._process_for_tasks(self.tasks_generator)
 
@@ -80,18 +80,23 @@ class MultiFetcher(object):
     def tasks_collector(self, task):
         yield None
 
-    def _process_finished_task(self, task):
+    def tasks_errors_collector(self, task, error):
+        yield None
+
+    def _process_finished_task(self, task, error=None):
         '''Передача управление обработчику для каждого завершенного task'''
         if not task:
             return
-        handler = getattr(task, 'handler', None)
-        if not handler:
-            self._process_for_tasks(self.tasks_collector(task))
+        args = [task]
+        if error:
+            handler = getattr(task, 'error_handler', self.tasks_errors_collector)
+            args.append(error)
         else:
-            if type(handler) == str:
-                handler = getattr(self, 'task_%s' % handler, None)
-            if callable(handler):
-                self._process_for_tasks(handler(task))
+            handler = getattr(task, 'handler', self.tasks_collector)
+        if type(handler) == str:
+            handler = getattr(self, 'task_%s' % handler, None)
+        if callable(handler):
+            self._process_for_tasks(handler(*args))
 
     def _process_for_tasks(self, generator):
         '''Извлекает и добавляет в очередь задания из функции'''
