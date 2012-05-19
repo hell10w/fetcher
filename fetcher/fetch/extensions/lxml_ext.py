@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from lxml.html import fromstring as html_fromstring
+from lxml.html import fromstring as html_fromstring, tostring as html_tostring
 from lxml.etree import fromstring as xml_fromstring
 
 from fetcher.errors import XPathNotFound
@@ -56,3 +56,16 @@ class LXMLExtension(BaseExtension):
 
     def xpath_exists(self, path):
         return len(self.xpath_list(path)) > 0
+
+    def make_links_absolute(self):
+        self.html_tree.make_links_absolute(self.response.url)
+
+    def html_replace(self, old_element, new_code):
+        # TODO: Проще Люк!
+        old_element.getparent().replace(
+            old_element,
+            html_fromstring(new_code)
+        )
+
+    def html_content(self):
+        return html_tostring(self.html_tree)

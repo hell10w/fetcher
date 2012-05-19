@@ -10,11 +10,18 @@ class Task(Extensions):
     def __init__(self, **kwarg):
         self.response = Response()
         self.request = Request()
+        self.group = None
         self.setup(**kwarg)
 
     def setup(self, **kwarg):
         '''Настройка параметров'''
         for name, value in kwarg.iteritems():
+            if isinstance(value, Response):
+                self.response = value.clone()
+                continue
+            if isinstance(value, Request):
+                self.request = value.clone()
+                continue
             if hasattr(self.request, name):
                 setattr(self.request, name, value)
             else:
@@ -22,7 +29,6 @@ class Task(Extensions):
 
     def clone(self):
         '''Возвращает копию таска'''
-        # TODO: правильно копировать response и request
         kargs = dict(
             (key, value)
             for key, value in self.__dict__.iteritems()
@@ -38,6 +44,31 @@ class Task(Extensions):
         self.request.is_multipart_post = False
 
 
+class TasksGroup(object):
+    def __init__(self, task, urls, **kwarg):
+        self.task = task
+        self.count = len(urls)
+        self.urls = urls
+        self.finished_tasks = [None] * self.count
+        self.setup(**kwarg)
+
+    def setup(self, **kwarg):
+        '''Настройка параметров'''
+        for name, value in kwarg.iteritems():
+            setattr(self, name, value)
+
+    def produce_tasks(self):
+        for index, url in enumerate(self.urls):
+            yield Task(
+                request=self.task.request,
+                url=url,
+                handler='group',
+                error_handler='group',
+                group=self,
+                index=index
+            )
+
+
 class Tasks(object):
     '''Менеджер задач'''
 
@@ -49,7 +80,7 @@ class Tasks(object):
                 Может принимать следующие значения: memory, mongo
         '''
 
-        self._queue = kwargs.pop('queue', MongoQueue)(**kwargs)
+        self._queue = kwargs.pop('queue', MemoryQueue)(**kwargs)
 
     def add_task(self, task=None, **kwargs):
         '''
@@ -72,6 +103,12 @@ class Tasks(object):
             task = Task(**kwargs)
 
         self._queue.put((priority, task))
+
+    def add_group(self, group=None, **kwargs):
+        if not group:
+            group = TasksGroup(**kwargs)
+        for task in group.produce_tasks():
+            self.add_task(task)
 
     def size(self):
         '''Размер очереди задач'''
