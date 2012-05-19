@@ -2,7 +2,7 @@
 
 import logging
 
-from fetcher import MultiFetcher
+from fetcher import MultiFetcher, TasksGroup
 
 
 class QipRu(MultiFetcher):
@@ -16,11 +16,12 @@ class QipRu(MultiFetcher):
         print '!!!!!!!!!!!!!!!!!!!!!'
         task.make_links_absolute()
         scripts = task.xpath_list('//script[@src]/@src')
-        self.tasks.add_group(
+        yield TasksGroup(
             task=task,
             urls=scripts,
             handler='main'
         )
+        #self.tasks.add_group()
         print scripts
         #print task.js
         #task.js.fireOnloadEvents()
