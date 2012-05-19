@@ -83,6 +83,7 @@ class FormsExtension(BaseExtension):
             if getattr(elem, 'type', None) == 'checkbox':
                 elem.checked = bool(value)
             else:
+                # TODO: проверять тип value - это может быть файлом
                 elem.value = value
 
         def set_input_by_xpath(xpath, index=0):
@@ -125,49 +126,26 @@ class FormsExtension(BaseExtension):
                         del post[name]
 
         # получаем URL для запроса
-
         action_url = urljoin(
             self.request.url,
             self.form.action
         )
 
-        # Values from `extra_post` should override values in form
-        # `extra_post` allows multiple value of one key
+        # TODO: за каким-то хуем нужна возможность дублировать ключи в post
+        # это нужно делать где-то здесь
 
-        # Process saved values of file fields
-        # TODO: чо за хуйня с файлами
-        #if self.form.method == 'POST':
-        #    if 'multipart' in self.form.get('enctype', ''):
-        #        for key, obj in self._file_fields.items():
-        #            post[key] = obj
+        # перезаписываем текущий post дополнительными параметрами
+        post.update(extra_post)
 
+        # окончательная подготовка конфигурации запроса
 
-        # \/
-        #post_items = post.items()
-        #del post
-
-        # TODO: extra_post!
-        if False:
-            if extra_post:
-                if isinstance(extra_post, dict):
-                    extra_post_items = extra_post.items()
-                else:
-                    extra_post_items = extra_post
-
-                # Drip existing post items with such key
-                keys_to_drop = set([x for x, y in extra_post_items])
-                for key in keys_to_drop:
-                    post_items = [(x, y) for x, y in post_items if x != key]
-
-                for key, value in extra_post_items:
-                    post_items.append((key, value))
-        # /\
-
+        # формирование URL и тела запроса в зависимости от параметров формы
         if self.form.method == 'POST':
             self.request.is_multipart_post = 'multipart' in self.form.get('enctype', '')
             self.request.url = action_url
             self.request.post = post
         else:
+            # TODO: хули эта пляска тут? надо делать что можно с кодировкой сразу и все
             post = dict(
                 (key.encode('utf-8'), value.encode('utf-8'))
                 for key, value in post.iteritems()

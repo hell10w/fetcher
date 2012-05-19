@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from fetcher.tasks import Task, Tasks, MemoryQueue, MongoQueue
+from fetcher.tasks import Task, TasksGroup, Tasks, MemoryQueue, MongoQueue
 from fetcher.fetch import Request
 from fetcher.multifetch.dispatcher import Dispatcher
 
@@ -77,22 +77,99 @@ class MultiFetcher(object):
         '''Генератор задач выполняемый при каждом выполнении хотя бы одной задачи'''
         yield None
 
+    def groups_collector(self, group):
+        yield None
+
     def tasks_collector(self, task):
         yield None
 
     def tasks_errors_collector(self, task, error):
         yield None
 
+    '''def task__script_loaded(self, task):
+        old_task = task.old_task
+        old_task.remote_scripts[task.script_index] = task.response.get_body()
+        old_task.remote_scripts_count -= 1
+
+        if not old_task.remote_scripts_count:
+            scripts = old_task.xpath_list('//script[@src]')
+            #print scripts
+            for index, script in enumerate(scripts):
+                #print old_task.remote_scripts[index]
+                #print '-' * 50
+                old_task.html_replace(
+                    script,
+                    '<script>' + old_task.remote_scripts[index] + '</script>'
+                )
+            print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+            #print old_task.html_content()
+            print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+            old_task.response.body = old_task.html_content()
+            self._process_finished_task(old_task)
+
+    def get_scripts_load_generator(self, task):
+        task.html_tree.make_links_absolute(task.response.url)
+
+        remote_scripts = task.xpath_list('//script[@src]/@src')
+
+        if remote_scripts:
+            task.remote_scripts_count = len(remote_scripts)
+            task.remote_scripts=[None for _ in range(task.remote_scripts_count)]
+
+            def generator():
+                for index, src in enumerate(remote_scripts):
+                    yield Task(
+                        url=src,
+                        cookies=task.request.cookies,
+                        script_index=index,
+                        handler='_script_loaded',
+                        old_task=task
+                    )
+
+            return generator
+
+        return None'''
+
+    def task_group(self, task, error=None):
+        group = task.group
+
+        group.finished_tasks[task.index] = task
+        group.count -= 1
+
+        if not group.count:
+            group.finished_tasks = zip(
+                group.urls,
+                group.finished_tasks
+            )
+            group.finished_tasks = dict(group.finished_tasks)
+
+            handler = getattr(group, 'handler', self.groups_collector)
+            if type(handler) == str:
+                handler = getattr(self, 'group_%s' % handler, None)
+            if callable(handler):
+                self._process_for_tasks(handler(group))
+
     def _process_finished_task(self, task, error=None):
         '''Передача управление обработчику для каждого завершенного task'''
         if not task:
             return
+
+        #handler = None
         args = [task]
+
+        '''if getattr(task, 'load_scripts', False):
+            generator = self.get_scripts_load_generator(task)
+            if generator:
+                handler = generator
+                args = []'''
+
+        #if not handler:
         if error:
             handler = getattr(task, 'error_handler', self.tasks_errors_collector)
             args.append(error)
         else:
             handler = getattr(task, 'handler', self.tasks_collector)
+
         if type(handler) == str:
             handler = getattr(self, 'task_%s' % handler, None)
         if callable(handler):
@@ -105,3 +182,5 @@ class MultiFetcher(object):
         for task in generator() if callable(generator) else generator:
             if isinstance(task, Task):
                 self.tasks.add_task(task)
+            elif isinstance(task, TasksGroup):
+                self._process_for_tasks(task.produce_tasks)
