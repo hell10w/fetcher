@@ -2,15 +2,29 @@
 
 import logging
 
-from fetcher import MultiFetcher, TasksGroup
+from fetcher import MultiFetcher, TasksGroup, Task
 
 
 class QipRu(MultiFetcher):
+    def tasks_generator(self):
+        for _ in range(1000):
+            yield Task(
+                handler='foo',
+                url='http://localhost',
+                index=_
+            )
+
+    def task_foo(self, task, error=None):
+        print task.index
+
     def on_start(self):
-        self.tasks.add_task(
+        #for task in self.process_tasks_generator():
+        #    print task,
+
+        '''self.tasks.add_task(
             url='http://qip.ru/reg/register',
             handler='main'
-        )
+        )'''
 
     def task_main(self, task, error=None):
         print '!!!!!!!!!!!!!!!!!!!!!'

@@ -89,6 +89,7 @@ class Tasks(object):
         '''
 
         self._queue = kwargs.pop('queue', MemoryQueue)(**kwargs)
+        self._queue_size = kwargs.get('threads_count', 20) * 2
 
     def add_task(self, task=None, **kwargs):
         '''
@@ -132,3 +133,7 @@ class Tasks(object):
     def empty(self):
         '''Проверяет пустоту очереди'''
         return self._queue.empty()
+
+    def full(self):
+        '''Проверяет превышение *рекомендуемого* размера очереди'''
+        return self._queue.qsize() == self._queue_size

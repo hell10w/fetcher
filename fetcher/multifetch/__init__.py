@@ -24,6 +24,8 @@ class MultiFetcher(object):
         self.dispatcher = Dispatcher(**kwargs)
         self.tasks = Tasks(**kwargs)
 
+        self.restart_tasks_generator(generator=self.tasks_generator())
+
     def start(self):
         '''Стартует работу менеджера'''
 
@@ -32,7 +34,7 @@ class MultiFetcher(object):
         try:
             self._should_stop = False
 
-            self._process_for_tasks(self.tasks_generator)
+            self._process_for_tasks(self._process_tasks_generator)
 
             while not self._should_stop:
                 while not self.dispatcher.is_full() and not self.tasks.empty():
@@ -48,7 +50,7 @@ class MultiFetcher(object):
                 for finished_task, error in self.dispatcher.finished_tasks():
                     self._process_finished_task(finished_task, error)
 
-                self._process_for_tasks(self.tasks_generator)
+                self._process_for_tasks(self._process_tasks_generator)
 
                 self.on_loop()
 
@@ -76,6 +78,25 @@ class MultiFetcher(object):
     def tasks_generator(self):
         '''Генератор задач выполняемый при каждом выполнении хотя бы одной задачи'''
         yield None
+
+    def _process_tasks_generator(self):
+        '''Генерация задач если генератор включен'''
+        if self.tasks_generator_enabled:
+            try:
+                while not self.tasks.full():
+                    yield self.tasks_generator_object.next()
+            except StopIteration:
+                self.tasks_generator_enabled = False
+
+    def restart_tasks_generator(self, generator=None):
+        '''Перезапуск или установка нового или те'''
+        self.tasks_generator_enabled = False
+
+        if not generator:
+            return
+
+        self.tasks_generator_object = generator
+        self.tasks_generator_enabled = True
 
     def groups_collector(self, group):
         '''Сюда стекаются все выполненные группы у которых нет обработчиков'''

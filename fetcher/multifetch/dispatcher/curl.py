@@ -13,7 +13,7 @@ class CurlDispatcher(BaseDispatcher):
     def __init__(self, **kwargs):
         super(CurlDispatcher, self).__init__()
 
-        self.threads_count = kwargs.pop('threads_count', 20)
+        self.threads_count = kwargs.get('threads_count', 20)
 
         self.fetcher = Fetcher()
 
