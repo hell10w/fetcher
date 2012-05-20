@@ -5,6 +5,7 @@ from fetcher.fetch.useragents import get_user_agent
 
 MEMORY_RESPONSE_BODY = 0    # сохранять ответ сервера в память
 FILE_RESPONSE_BODY = 1      # сохранять ответ сервера в файл
+AUTO_RESPONSE_BODY = 2      # автоматически определять
 
 
 class Request(object):
@@ -35,7 +36,7 @@ class Request(object):
     overall_timeout = None
 
     # поведение транспорта по сохранению ответа сервера
-    body_destination = MEMORY_RESPONSE_BODY
+    body_destination = AUTO_RESPONSE_BODY
 
     def __init__(self, **kwargs):
         for key, value in kwargs.iteritems():

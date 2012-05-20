@@ -6,7 +6,7 @@ from Cookie import SimpleCookie
 
 import pycurl
 
-from fetcher.fetch.request import MEMORY_RESPONSE_BODY, FILE_RESPONSE_BODY
+from fetcher.fetch.request import MEMORY_RESPONSE_BODY, FILE_RESPONSE_BODY, AUTO_RESPONSE_BODY
 from fetcher.fetch.temporaryfile import TempFile
 from fetcher.fetch.transport.base import BaseFetcher
 
@@ -103,18 +103,13 @@ class CurlFetcher(BaseFetcher):
             curl.setopt(pycurl.PROXYTYPE, proxy_type)
             curl.setopt(pycurl.PROXYUSERPWD, task.request.proxy_auth or '')
 
-        if task.request.body_destination == FILE_RESPONSE_BODY:
-            task.response.body = TempFile()
-            write_function = task.response.body.write
-        elif task.request.body_destination == MEMORY_RESPONSE_BODY:
-            task.response.body = []
-            write_function = lambda chunk: task.response.body.append(chunk)
-
-        curl.setopt(pycurl.WRITEFUNCTION, write_function)
-
+        # сборщик заголовков
         task.response.header_chunks = []
         curl.setopt(pycurl.HEADERFUNCTION, task.response.header_chunks.append)
 
+        # коллектор тела ответа сервера
+        task.response._destination = task.request.body_destination
+        curl.setopt(pycurl.WRITEFUNCTION, task.response._writer)
 
     def process_to_task(self, task, **kwargs):
         '''Возвращает результат выполнения запроса в задачу'''
@@ -125,17 +120,9 @@ class CurlFetcher(BaseFetcher):
 
         curl = kwargs.get('curl', None)
 
-        task.response.headers = {}
-        if task.response.header_chunks:
-            for line in task.response.header_chunks[::-1]:
-                line = line.strip()
-                if line.startswith('HTTP/'):
-                    break
-                elif line:
-                    key, value = line.split(': ', 1)
-                    task.response.headers.setdefault(key, []).append(value)
+        task.response._process_headers()
 
-        if task.request.body_destination == MEMORY_RESPONSE_BODY:
+        if isinstance(task.response.body, list):
             task.response.body = ''.join(task.response.body)
 
         task.response.total_time = curl.getinfo(pycurl.TOTAL_TIME)

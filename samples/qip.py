@@ -6,13 +6,13 @@ from fetcher import MultiFetcher, TasksGroup, Task
 
 
 class QipRu(MultiFetcher):
-    def tasks_generator(self):
-        for _ in range(1000):
+    '''def tasks_generator(self):
+        for _ in range(10):
             yield Task(
                 handler='foo',
                 url='http://localhost',
                 index=_
-            )
+            )'''
 
     def task_foo(self, task, error=None):
         print task.index
@@ -21,14 +21,15 @@ class QipRu(MultiFetcher):
         #for task in self.process_tasks_generator():
         #    print task,
 
-        '''self.tasks.add_task(
+        self.tasks.add_task(
             url='http://qip.ru/reg/register',
             handler='main'
-        )'''
+        )
 
     def task_main(self, task, error=None):
         print '!!!!!!!!!!!!!!!!!!!!!'
         task.make_links_absolute()
+        print task.response.get_body()[:200]
         scripts = task.xpath_list('//script[@src]/@src')
 
         '''yield TasksGroup(
