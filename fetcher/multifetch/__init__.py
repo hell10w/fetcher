@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from fetcher.tasks import Task, TasksGroup, Tasks, MemoryQueue, MongoQueue
+from fetcher.tasks import Task, TaskResult, TasksGroup, Tasks, MemoryQueue, MongoQueue
 from fetcher.fetch import Request
 from fetcher.multifetch.dispatcher import Dispatcher
 
@@ -81,12 +81,8 @@ class MultiFetcher(object):
         '''Сюда стекаются все выполненные группы у которых нет обработчиков'''
         yield None
 
-    def tasks_collector(self, task):
+    def tasks_collector(self, task, error=None):
         '''Сюда стекаются все выполненные задачи у которых нет обработчиков'''
-        yield None
-
-    def tasks_errors_collector(self, task, error):
-        '''Сюда стекаются все задачи выполненные с ошибками у которых нет обработчиков'''
         yield None
 
     def task_group(self, task, error=None):
@@ -95,13 +91,20 @@ class MultiFetcher(object):
         group = task.group
         # запоминаем выполненную задачу в группу
         group.finished_tasks[task.index] = task
+        if error:
+            group.errors[task.index] = error
         # уменьшаем счетчик оставшихся задач
         group.count -= 1
         # если все задачи выполнены -
         if not group.count:
             # сворачиваем в словарь все выполненные задачи: url задачи - выполненная задача
             # url устанавливается старый (при выполнении мог быть редирект, так вот, там он
-            # тот который установили при создании группы
+            # тот, который установили при создании группы
+            group.finished_tasks = [
+                TaskResult(task=task, error=error)
+                for task in group.finished_tasks
+                for error in group.errors
+            ]
             group.finished_tasks = zip(
                 group.urls,
                 group.finished_tasks
@@ -120,15 +123,14 @@ class MultiFetcher(object):
             return
 
         args = [task]
-
         if error:
-            handler = getattr(task, 'error_handler', self.tasks_errors_collector)
             args.append(error)
-        else:
-            handler = getattr(task, 'handler', self.tasks_collector)
+
+        handler = getattr(task, 'handler', self.tasks_collector)
 
         if type(handler) == str:
             handler = getattr(self, 'task_%s' % handler, None)
+
         if callable(handler):
             self._process_for_tasks(handler(*args))
 
@@ -136,8 +138,10 @@ class MultiFetcher(object):
         '''Извлекает и добавляет в очередь задания из функции'''
         if not generator:
             return
+
         for task in generator() if callable(generator) else generator:
             if isinstance(task, Task):
                 self.tasks.add_task(task)
+
             elif isinstance(task, TasksGroup):
                 self.tasks.add_group(task)

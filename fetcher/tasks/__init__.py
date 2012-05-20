@@ -44,11 +44,18 @@ class Task(Extensions):
         self.request.is_multipart_post = False
 
 
+class TaskResult(dict):
+    def __getattr__(self, name):
+        return self[name]
+
+
 class TasksGroup(object):
+    '''Группа задач'''
     def __init__(self, task, urls, **kwarg):
-        self.task = task
+        self.task = task.clone()
         self.count = len(urls)
         self.urls = urls
+        self.errors = [None] * self.count
         self.finished_tasks = [None] * self.count
         self.setup(**kwarg)
 
@@ -58,6 +65,7 @@ class TasksGroup(object):
             setattr(self, name, value)
 
     def produce_tasks(self):
+        '''Генератор задач '''
         for index, url in enumerate(self.urls):
             yield Task(
                 request=self.task.request,
@@ -105,6 +113,9 @@ class Tasks(object):
         self._queue.put((priority, task))
 
     def add_group(self, group=None, **kwargs):
+        '''
+        Добавление группы задач
+        '''
         if not group:
             group = TasksGroup(**kwargs)
         for task in group.produce_tasks():
