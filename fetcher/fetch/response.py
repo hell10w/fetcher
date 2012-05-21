@@ -91,7 +91,7 @@ class Response(object):
         self._write_function = lambda chunk: None
 
         if destination == FILE_RESPONSE_BODY:
-            self.body = TempFile()
+            self.body = TempFile(**(self._temp_file_options or {}))
             self._write_function = self.body.write
 
         elif destination == MEMORY_RESPONSE_BODY:

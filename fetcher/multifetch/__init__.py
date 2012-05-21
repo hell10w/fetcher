@@ -116,8 +116,7 @@ class MultiFetcher(object):
             # тот, который установили при создании группы
             group.finished_tasks = [
                 TaskResult(task=task, error=error)
-                for task in group.finished_tasks
-                for error in group.errors
+                for task, error in zip(group.finished_tasks, group.errors)
             ]
             group.finished_tasks = zip(
                 group.urls,

@@ -109,6 +109,7 @@ class CurlFetcher(BaseFetcher):
 
         # коллектор тела ответа сервера
         task.response._destination = task.request.body_destination
+        task.response._temp_file_options = task.request.temp_file_options
         curl.setopt(pycurl.WRITEFUNCTION, task.response._writer)
 
     def process_to_task(self, task, **kwargs):

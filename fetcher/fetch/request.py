@@ -36,16 +36,23 @@ class Request(object):
     overall_timeout = None
 
     # поведение транспорта по сохранению ответа сервера
-    body_destination = AUTO_RESPONSE_BODY
+    body_destination = FILE_RESPONSE_BODY
+
+    temp_file_options = None
 
     def __init__(self, **kwargs):
+        self.setup(**kwargs)
+
+    def setup(self, **kwargs):
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
 
-    def clone(self):
-        kargs = dict(
+    def clone(self, **kwargs):
+        args = dict(
             (key, value)
             for key, value in self.__dict__.iteritems()
             if not key.startswith('_')
         )
-        return Request(**kargs)
+        result = Request(**args)
+        result.setup(**kwargs)
+        return result

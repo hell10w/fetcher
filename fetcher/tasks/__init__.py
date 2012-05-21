@@ -7,10 +7,12 @@ from fetcher.fetch import Extensions, Response, Request
 class Task(Extensions):
     '''Отдельная задача'''
 
-    def __init__(self, **kwarg):
+    def __init__(self, task=None, **kwarg):
         self.response = Response()
         self.request = Request()
         self.group = None
+        if task:
+            self.clone(task)
         self.setup(**kwarg)
 
     def setup(self, **kwarg):
@@ -27,14 +29,17 @@ class Task(Extensions):
             else:
                 setattr(self, name, value)
 
-    def clone(self):
-        '''Возвращает копию таска'''
+    def clone(self, task=None):
+        '''Возвращает копию таска или делает текущий копией другого'''
         kargs = dict(
             (key, value)
-            for key, value in self.__dict__.iteritems()
+            for key, value in (task if task else self).__dict__.iteritems()
             if not key.startswith('_')
         )
-        return Task(**kargs)
+        if task:
+            self.setup(**kargs)
+        else:
+            return Task(**kargs)
 
     def process_response(self):
         '''Подготовка будущего запроса исходя из ответа'''
@@ -68,10 +73,9 @@ class TasksGroup(object):
         '''Генератор задач '''
         for index, url in enumerate(self.urls):
             yield Task(
-                request=self.task.request,
+                task=self.task,
                 url=url,
                 handler='group',
-                error_handler='group',
                 group=self,
                 index=index
             )

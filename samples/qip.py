@@ -23,13 +23,15 @@ class QipRu(MultiFetcher):
 
         self.tasks.add_task(
             url='http://qip.ru/reg/register',
-            handler='main'
+            handler='main',
+            temp_file_options=dict(
+                delete_on_finish=False
+            )
         )
 
     def task_main(self, task, error=None):
-        print '!!!!!!!!!!!!!!!!!!!!!'
         task.make_links_absolute()
-        print task.response.get_body()[:200]
+
         scripts = task.xpath_list('//script[@src]/@src')
 
         '''yield TasksGroup(
@@ -54,6 +56,7 @@ class QipRu(MultiFetcher):
         print group.finished_tasks
         for url, task_result in group.finished_tasks.iteritems():
             print url, task_result.task, task_result.error
+            print '  ', task_result.task.response.body.name
 
 
 if __name__ == '__main__':

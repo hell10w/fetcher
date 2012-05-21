@@ -3,12 +3,16 @@
 import os
 import os.path
 from tempfile import gettempdir
+from time import time
 
 
 class TempFile(object):
     '''Временный файл для хранения тела ответа сервера'''
 
-    index = 0
+    USE_SUBDIRS = True
+    DELETE_ON_FINISH = True
+
+    _index = 0
 
     def __init__(self, **kwargs):
         '''
@@ -21,20 +25,20 @@ class TempFile(object):
         path = kwargs.pop('path', gettempdir())
         filename = kwargs.pop(
             'filename',
-            '%X.tmp' % TempFile.index
+            '%X.tmp' % TempFile._index
         )
 
-        use_subdir = kwargs.pop('use_subdir', True)
-        subdir = 'fetcher-%X' % (os.getpid()) if use_subdir else ''
+        use_subdir = kwargs.pop('use_subdir', TempFile.USE_SUBDIRS)
+        subdir = 'fetcher-%X-%X' % (os.getpid(), time()) if use_subdir else ''
 
-        self.delete_on_finish = kwargs.pop('delete_on_finish', True)
+        self.delete_on_finish = kwargs.pop('delete_on_finish', TempFile.DELETE_ON_FINISH)
 
         self.file = None
         self.name = os.path.join(path, subdir, filename)
 
         self._open_file()
 
-        TempFile.index += 1
+        TempFile._index += 1
 
     def __del__(self):
         if self.delete_on_finish:
@@ -44,7 +48,8 @@ class TempFile(object):
         if type(self.file) is file:
             return
         path, _ = os.path.split(self.name)
-        os.mkdir(path)
+        if not os.path.exists(path):
+            os.mkdir(path)
         self.file = open(self.name, 'w+b')
 
     def _close_file(self):
