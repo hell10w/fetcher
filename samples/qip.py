@@ -34,22 +34,13 @@ class QipRu(MultiFetcher):
 
         scripts = task.xpath_list('//script[@src]/@src')
 
-        '''yield TasksGroup(
-            task=task,
-            urls=scripts,
-            handler='main'
-        )'''
-
-        self.tasks.add_group(
+        yield TasksGroup(
             task=task,
             urls=scripts,
             handler='main'
         )
 
-        print scripts
-        #print task.js
-        #task.js.fireOnloadEvents()
-        #print dir(task.js.document)
+        print 'Загрузка группы скриптов: %s' % scripts
 
     def group_main(self, group):
         print group
