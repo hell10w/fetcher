@@ -46,13 +46,12 @@ class Request(object):
     def setup(self, **kwargs):
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
+        return self
 
     def clone(self, **kwargs):
-        args = dict(
+        _kwargs = dict(
             (key, value)
             for key, value in self.__dict__.iteritems()
             if not key.startswith('_')
         )
-        result = Request(**args)
-        result.setup(**kwargs)
-        return result
+        return Request(**_kwargs).setup(**kwargs)

@@ -4,6 +4,7 @@ from lxml.html import fromstring as html_fromstring, tostring as html_tostring
 from lxml.etree import fromstring as xml_fromstring
 
 from fetcher.errors import XPathNotFound
+from fetcher.fetch.temporaryfile import TempFile
 from base import BaseExtension
 
 
@@ -60,12 +61,10 @@ class LXMLExtension(BaseExtension):
     def make_links_absolute(self):
         self.html_tree.make_links_absolute(self.response.url)
 
-    def html_replace(self, old_element, new_code):
-        # TODO: Проще Люк!
-        old_element.getparent().replace(
-            old_element,
-            html_fromstring(new_code)
-        )
-
     def html_content(self):
-        return html_tostring(self.html_tree)
+        return html_tostring(self.html_tree, encoding='utf-8')
+
+    def save_html_content(self):
+        temp_file = TempFile(delete_on_finish=False)
+        temp_file.write(self.html_content())
+        return temp_file

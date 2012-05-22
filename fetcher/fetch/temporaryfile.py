@@ -11,6 +11,7 @@ class TempFile(object):
 
     USE_SUBDIRS = True
     DELETE_ON_FINISH = True
+    SUBDIR = 'fetcher-%X-%X' % (os.getpid(), time())
 
     _index = 0
 
@@ -29,12 +30,12 @@ class TempFile(object):
         )
 
         use_subdir = kwargs.pop('use_subdir', TempFile.USE_SUBDIRS)
-        subdir = 'fetcher-%X-%X' % (os.getpid(), time()) if use_subdir else ''
 
         self.delete_on_finish = kwargs.pop('delete_on_finish', TempFile.DELETE_ON_FINISH)
 
         self.file = None
-        self.name = os.path.join(path, subdir, filename)
+        self.path = os.path.join(path, TempFile.SUBDIR) if use_subdir else path
+        self.name = os.path.join(self.path, filename)
 
         self._open_file()
 
@@ -43,6 +44,8 @@ class TempFile(object):
     def __del__(self):
         if self.delete_on_finish:
             os.remove(self.name)
+            if not len(os.listdir(self.path)):
+                os.remove(self.path)
 
     def _open_file(self):
         if type(self.file) is file:

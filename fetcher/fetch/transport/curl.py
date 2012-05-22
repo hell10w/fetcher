@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from urllib import urlencode
 from StringIO import StringIO
 from Cookie import SimpleCookie
 
 import pycurl
 
-from fetcher.fetch.request import MEMORY_RESPONSE_BODY, FILE_RESPONSE_BODY, AUTO_RESPONSE_BODY
-from fetcher.fetch.temporaryfile import TempFile
 from fetcher.fetch.transport.base import BaseFetcher
 
 

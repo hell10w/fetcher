@@ -102,7 +102,7 @@ class MultiFetcher(object):
     def task_group(self, task, error=None):
         '''Внутренний обработчик загрузки зачади ищ группы'''
         # получаем группы
-        group = task.group
+        group = TasksGroup.groups.get(task.group, None)
         # запоминаем выполненную задачу в группу
         group.finished_tasks[task.index] = task
         if error:

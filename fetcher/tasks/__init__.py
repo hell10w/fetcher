@@ -7,12 +7,9 @@ from fetcher.fetch import Extensions, Response, Request
 class Task(Extensions):
     '''Отдельная задача'''
 
-    def __init__(self, task=None, **kwarg):
+    def __init__(self, **kwarg):
         self.response = Response()
         self.request = Request()
-        self.group = None
-        if task:
-            self.clone(task)
         self.setup(**kwarg)
 
     def setup(self, **kwarg):
@@ -28,18 +25,16 @@ class Task(Extensions):
                 setattr(self.request, name, value)
             else:
                 setattr(self, name, value)
+        return self
 
-    def clone(self, task=None):
-        '''Возвращает копию таска или делает текущий копией другого'''
-        kargs = dict(
+    def clone(self, **kwargs):
+        '''Возвращает копию таска'''
+        _kwargs = dict(
             (key, value)
-            for key, value in (task if task else self).__dict__.iteritems()
+            for key, value in self.__dict__.iteritems()
             if not key.startswith('_')
         )
-        if task:
-            self.setup(**kargs)
-        else:
-            return Task(**kargs)
+        return Task(**_kwargs).setup(**kwargs)
 
     def process_response(self):
         '''Подготовка будущего запроса исходя из ответа'''
@@ -56,13 +51,21 @@ class TaskResult(dict):
 
 class TasksGroup(object):
     '''Группа задач'''
+
+    groups = {}
+
     def __init__(self, task, urls, **kwarg):
-        self.task = task.clone()
+        TasksGroup.groups[id(self)] = self
+
+        self.task = task
         self.count = len(urls)
         self.urls = urls
         self.errors = [None] * self.count
         self.finished_tasks = [None] * self.count
         self.setup(**kwarg)
+
+    def __del__(self):
+        TasksGroup.groups.pop(id(self), None)
 
     def setup(self, **kwarg):
         '''Настройка параметров'''
@@ -73,10 +76,11 @@ class TasksGroup(object):
         '''Генератор задач '''
         for index, url in enumerate(self.urls):
             yield Task(
-                task=self.task,
-                url=url,
+                request=self.task.request.clone(
+                    url=str(url)
+                ),
                 handler='group',
-                group=self,
+                group=id(self),
                 index=index
             )
 
@@ -92,7 +96,7 @@ class Tasks(object):
                 Может принимать следующие значения: memory, mongo
         '''
 
-        self._queue = kwargs.pop('queue', MemoryQueue)(**kwargs)
+        self._queue = kwargs.pop('queue', MongoQueue)(**kwargs)
         self._queue_size = kwargs.get('threads_count', 20) * 2
 
     def add_task(self, task=None, **kwargs):
@@ -123,6 +127,7 @@ class Tasks(object):
         '''
         if not group:
             group = TasksGroup(**kwargs)
+
         for task in group.produce_tasks():
             self.add_task(task)
 

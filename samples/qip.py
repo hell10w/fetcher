@@ -6,33 +6,18 @@ from fetcher import MultiFetcher, TasksGroup, Task
 
 
 class QipRu(MultiFetcher):
-    '''def tasks_generator(self):
-        for _ in range(10):
-            yield Task(
-                handler='foo',
-                url='http://localhost',
-                index=_
-            )'''
-
-    def task_foo(self, task, error=None):
-        print task.index
-
-    def on_start(self):
-        #for task in self.process_tasks_generator():
-        #    print task,
-
+    def tasks_generator(self):
         self.tasks.add_task(
             url='http://qip.ru/reg/register',
             handler='main',
-            temp_file_options=dict(
-                delete_on_finish=False
-            )
+            temp_file_options=dict(delete_on_finish=False)
         )
 
     def task_main(self, task, error=None):
         task.make_links_absolute()
-
         scripts = task.xpath_list('//script[@src]/@src')
+
+        print scripts
 
         yield TasksGroup(
             task=task,
@@ -40,14 +25,20 @@ class QipRu(MultiFetcher):
             handler='main'
         )
 
-        print 'Загрузка группы скриптов: %s' % scripts
-
     def group_main(self, group):
-        print group
-        print group.finished_tasks
-        for url, task_result in group.finished_tasks.iteritems():
-            print url, task_result.task, task_result.error
-            print '  ', task_result.task.response.body.name
+        loaded_scripts = group.finished_tasks
+        print loaded_scripts
+        scripts = group.task.xpath_list('//script[@src]')
+        for script in scripts:
+            code = loaded_scripts[script.attrib['src']].task.response.get_unicode_body()
+            script.text = code
+            del script.attrib['src']
+            #print dir(script)
+            #
+            #group.task.html_replace(script, '<script type="text/javascript">' + .decode('utf-8') + '</script>')
+        #print group.task.html_content()
+        print group.task.html_tree.text
+        print group.task.save_html_content().name
 
 
 if __name__ == '__main__':

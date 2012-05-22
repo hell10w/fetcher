@@ -24,10 +24,16 @@ class Response(object):
 
     def get_body(self):
         '''Возвращает тело ответа целиком'''
-        body = ''
-        for chunk in self.read_body():
-            body += chunk or ''
-        return body
+        if not hasattr(self, '_body'):
+            self._body = ''
+            for chunk in self.read_body():
+                self._body += chunk or ''
+        return self._body
+
+    def get_unicode_body(self):
+        if not hasattr(self, '_unicode_body'):
+            self._unicode_body = self.get_body().decode('utf-8', 'ignore')
+        return self._unicode_body
 
     def read_body(self, block_size=None):
         '''
@@ -49,13 +55,18 @@ class Response(object):
         #self.save(path)
         #webbrowser.open('file://' + path)
 
-    def clone(self):
-        kargs = dict(
+    def setup(self, **kwargs):
+        for key, value in kwargs.iteritems():
+            setattr(self, key, value)
+        return self
+
+    def clone(self, **kwargs):
+        _kwargs = dict(
             (key, value)
             for key, value in self.__dict__.iteritems()
-            if not key.startswith('_') and key != 'body'
+            if key != 'body' and not key.startswith('_')
         )
-        return Response(**kargs)
+        return Response(**_kwargs).setup(**kwargs)
 
     def _process_headers(self):
         '''Объединение заголовков ответа в словарь'''
