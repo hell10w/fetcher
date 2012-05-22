@@ -12,6 +12,6 @@ class JSExtension(BaseExtension):
         if not hasattr(self, '_js'):
             self._js = HtmlWindow(
                 url=self.response.url,
-                dom_or_doc=BeautifulSoup(self.response.get_body())
+                dom_or_doc=BeautifulSoup(self.response.get_unicode_body())
             )
         return self._js

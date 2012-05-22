@@ -9,8 +9,7 @@ class QipRu(MultiFetcher):
     def tasks_generator(self):
         self.tasks.add_task(
             url='http://qip.ru/reg/register',
-            handler='main',
-            temp_file_options=dict(delete_on_finish=False)
+            handler='main'
         )
 
     def task_main(self, task, error=None):
@@ -26,19 +25,30 @@ class QipRu(MultiFetcher):
         )
 
     def group_main(self, group):
+        task = group.task
         loaded_scripts = group.finished_tasks
-        print loaded_scripts
+
         scripts = group.task.xpath_list('//script[@src]')
+
         for script in scripts:
-            code = loaded_scripts[script.attrib['src']].task.response.get_unicode_body()
-            script.text = code
+            remote_script_task = loaded_scripts[script.attrib['src']].task
+            remote_script = remote_script_task.response.get_unicode_body()
+            script.text = '// -*- coding: utf-8 -*-\n' + remote_script
             del script.attrib['src']
-            #print dir(script)
-            #
-            #group.task.html_replace(script, '<script type="text/javascript">' + .decode('utf-8') + '</script>')
-        #print group.task.html_content()
-        print group.task.html_tree.text
-        print group.task.save_html_content().name
+
+        group.task.response.body = group.task.save_html_content()
+        del group.task.response.__dict__['_body']
+
+        task.choose_form(1)
+        print task.form_fields()
+
+
+        task.js.fireOnloadEvents()
+
+        #for form in task.forms:
+        #    print dict(form.fields)
+
+        #print group.task.save_html_content().name
 
 
 if __name__ == '__main__':
