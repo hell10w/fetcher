@@ -2,8 +2,7 @@
 
 import re
 
-from fetcher import MultiFetcher, Task
-from fetcher.fetch.extensions.lxml_ext import Structure as x
+from fetcher import MultiFetcher, Task, Structure as x
 
 
 class MovieFinder(MultiFetcher):

@@ -2,7 +2,7 @@
 
 from time import time
 
-from fetcher import MultiFetcher, MemoryQueue, MongoQueue
+from fetcher import MultiFetcher, MemoryQueue, MongoQueue, Task
 
 
 class Worker(MultiFetcher):
@@ -11,8 +11,9 @@ class Worker(MultiFetcher):
 
         self.index = 0
 
+    def tasks_generator(self):
         for _ in xrange(1000):
-            self.tasks.add_task(
+            yield Task(
                 url='http://localhost',
                 index=_ + 1
             )
@@ -36,15 +37,5 @@ def worker(queue=MemoryQueue, repeat=6):
     print elapsed / repeat
     print
 
-'''worker = Worker(
-    threads_count=20,
-    queue=MemoryQueue
-)
-worker.start()'''
 
 worker()
-#worker(queue=MongoQueue)
-
-
-#worker(processes_count=2)
-#worker(processes_count=4)
