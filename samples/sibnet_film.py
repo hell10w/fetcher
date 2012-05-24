@@ -51,7 +51,36 @@ class MovieFinder(MultiFetcher):
             yield task
             return
 
-        items = task.crazy_grab(
+        items = task.structured_xpath(
+            '//div[@class="b-mini-card"]/div/div',
+            x(
+                './div[1]',
+                kind='./a[1]/text()',
+                year='./a[2]/text()',
+            ),
+            x(
+                './div[@class="b-mini-card__body"]',
+                x(
+                    './h2/a',
+                    url='./@href',
+                    title='./text()'
+                ),
+                description='./div[@class="b-mini-card__desc"]/text()',
+                tags=x(
+                    './div[@class="b-mini-card__tags"]/a',
+                    url='./@href',
+                    name='./text()'
+                )
+            ),
+            img='./a[1]/img/@src'
+        )
+
+        #
+        # И Л И
+        #
+
+        '''
+        items = task.structured_xpath(
             x(
                 '//div[@class="b-mini-card"]/div/div',
                 x(
@@ -76,6 +105,7 @@ class MovieFinder(MultiFetcher):
                 img='./a[1]/img/@src'
             )
         )
+        '''
 
         for item in items:
             for key, value in item.iteritems():

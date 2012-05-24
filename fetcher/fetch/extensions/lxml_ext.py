@@ -8,6 +8,11 @@ from fetcher.fetch.temporaryfile import TempFile
 from base import BaseExtension
 
 
+class DotDict(dict):
+    def __getattr__(self, item):
+        return self[item]
+
+
 class Structure(object):
     def __init__(self, xpath, *args, **kwargs):
         self._xpath = xpath
@@ -54,28 +59,20 @@ class LXMLExtension(BaseExtension):
         else:
             return items
 
-    def crazy_grab(self, structure):
-        def parser(element, xpath, *args, **kwargs):
+    def structured_xpath(self, xpath='./', *args, **kwargs):
+        '''Функция структурированного парсинга страницы с помощью xpath'''
+        # как пользоваться - смотреть в примере
+        def parser(element, structure):
             items = []
-            for element in element.xpath(xpath):
-                item = {}
-                for structure in args:
-                    res = parser(
-                        element,
-                        structure._xpath,
-                        *structure._args,
-                        **structure._kwargs
-                    )
+            for element in element.xpath(structure._xpath):
+                item = DotDict()
+                for substructure in structure._args:
+                    res = parser(element, substructure)
                     if res:
                         item.update(res[0])
-                for key, value in kwargs.iteritems():
+                for key, value in structure._kwargs.iteritems():
                     if isinstance(value, Structure):
-                        item[key] = parser(
-                            element,
-                            value._xpath,
-                            *value._args,
-                            **value._kwargs
-                        )
+                        item[key] = parser(element, value)
                     else:
                         res = element.xpath(value)
                         if res:
@@ -83,11 +80,14 @@ class LXMLExtension(BaseExtension):
                 items.append(item)
             return items
 
+        if isinstance(xpath, str):
+            structure = Structure(xpath, *args, **kwargs)
+        elif isinstance(xpath, Structure):
+            structure = xpath
+
         return parser(
             self.html_tree,
-            structure._xpath,
-            *structure._args,
-            **structure._kwargs
+            structure
         )
 
     def assert_xpath(self, path):
