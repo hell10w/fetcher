@@ -96,7 +96,7 @@ class Tasks(object):
                 Может принимать следующие значения: memory, mongo
         '''
 
-        self._queue = kwargs.pop('queue', MongoQueue)(**kwargs)
+        self._queue = kwargs.pop('queue', MemoryQueue)(**kwargs)
         self._queue_size = kwargs.get('threads_count', 20) * 2
 
     def add_task(self, task=None, **kwargs):
@@ -114,8 +114,8 @@ class Tasks(object):
             task = task.clone()
 
         if len(kwargs) and task:
-            for name, value in kwargs.iteritems():
-                setattr(task, name, value)
+            task.setup(**kwargs)
+
         if not task:
             task = Task(**kwargs)
 

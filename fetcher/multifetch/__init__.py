@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from fetcher.tasks import Task, TaskResult, TasksGroup, Tasks, MemoryQueue, MongoQueue
+from fetcher.errors import FetcherException
 from fetcher.fetch import Request
 from fetcher.multifetch.dispatcher import Dispatcher
 
@@ -22,7 +23,7 @@ class MultiFetcher(object):
     def start(self):
         '''Стартует работу менеджера'''
 
-        self.on_start()
+        self._process_for_tasks(self.on_start())
 
         try:
             self._should_stop = False
@@ -81,13 +82,8 @@ class MultiFetcher(object):
             except StopIteration:
                 self.tasks_generator_enabled = False
 
-    def restart_tasks_generator(self, generator=None):
-        '''Перезапуск или установка нового или те'''
-        self.tasks_generator_enabled = False
-
-        if not generator:
-            return
-
+    def restart_tasks_generator(self, generator):
+        '''Перезапуск генератора задач'''
         self.tasks_generator_object = generator
         self.tasks_generator_enabled = True
 

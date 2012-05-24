@@ -10,24 +10,32 @@ class ProxyFinder(MultiFetcher):
             handler='search'
         )
 
-    def task_search(self, task):
-        print task.js
+    def task_search(self, task, error=None):
+        task.set_input(name='q', value='proxy list')
+        task.submit()
+        yield task.setup(handler='result')
 
-        #task.set_input(name='q', value='wiki')
-        #task.submit()
-
-        return
-
-        self.tasks.add_task(
-            task=task,
-            handler='result'
-        )
-
-    def task_result(self, task):
-        links = task.xpath_list('//li/h3/a[1]')
-        print len(links)
+    def task_result(self, task, error=None):
+        if error:
+            print 'Ошибка при загрузке выдачи гугла. Повтор...'
+            yield task
+            return
+        links = task.xpath_list('//li/h3/a[1]/@href')
+        links = map(str, links)
+        links = [
+            link.split('?q=', 1)[1].split('&sa=', 1)[0]
+            for link in links
+            if link.startswith('/url')
+        ]
+        print 'Найдено %d ссылок. Переход...' % (len(links))
         for link in links:
-            print '%s [%s]' % (link.text_content(), link.attrib['href'])
+            self.tasks.add_task(
+                url=link,
+                handler='site'
+            )
+
+    def task_site(self, task, error=None):
+        print task
 
 
 if __name__ == '__main__':

@@ -45,7 +45,7 @@ class TempFile(object):
         if self.delete_on_finish:
             os.remove(self.name)
             if not len(os.listdir(self.path)):
-                os.remove(self.path)
+                os.removedirs(self.path)
 
     def _open_file(self):
         if type(self.file) is file:

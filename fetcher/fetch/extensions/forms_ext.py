@@ -135,7 +135,8 @@ class FormsExtension(BaseExtension):
         # это нужно делать где-то здесь
 
         # перезаписываем текущий post дополнительными параметрами
-        post.update(extra_post)
+        if extra_post:
+            post.update(extra_post)
 
         # окончательная подготовка конфигурации запроса
 

@@ -8,12 +8,14 @@ from fetcher.fetch.temporaryfile import TempFile
 from base import BaseExtension
 
 
-# TODO: def xpath_text(self, path, default=NULL, filter=None, smart=False, normalize_space=True)
-# TODO: def xpath_number(self, path, default=NULL, filter=None, ignore_spaces=False, smart=False)
-# TODO: def find_link_rex(self, rex, make_absolute=True)
-# TODO: def find_link(self, href_pattern, make_absolute=True)
-# TODO: def follow_link(self, anchor=None, href=None)
-# TODO: def find_content_blocks(self, min_length=None)
+class Structure(object):
+    def __init__(self, xpath, *args, **kwargs):
+        self._xpath = xpath
+        self._args = args
+        self._kwargs = kwargs
+
+    def __repr__(self):
+        return '<%s %s %s>' % (self._xpath, self._args, self._kwargs)
 
 
 class LXMLExtension(BaseExtension):
@@ -29,7 +31,7 @@ class LXMLExtension(BaseExtension):
     @property
     def xml_tree(self):
         if not hasattr(self, '_xml_tree'):
-            body = self.response.get_body()
+            body = self.response.get_unicode_body()
             if not body:
                 body = '<html></html>'
             self._xml_tree = xml_fromstring(body)
@@ -51,6 +53,42 @@ class LXMLExtension(BaseExtension):
             return [x for x in items if filter(x)]
         else:
             return items
+
+    def crazy_grab(self, structure):
+        def parser(element, xpath, *args, **kwargs):
+            items = []
+            for element in element.xpath(xpath):
+                item = {}
+                for structure in args:
+                    res = parser(
+                        element,
+                        structure._xpath,
+                        *structure._args,
+                        **structure._kwargs
+                    )
+                    if res:
+                        item.update(res[0])
+                for key, value in kwargs.iteritems():
+                    if isinstance(value, Structure):
+                        item[key] = parser(
+                            element,
+                            value._xpath,
+                            *value._args,
+                            **value._kwargs
+                        )
+                    else:
+                        res = element.xpath(value)
+                        if res:
+                            item[key] = res[0].strip()
+                items.append(item)
+            return items
+
+        return parser(
+            self.html_tree,
+            structure._xpath,
+            *structure._args,
+            **structure._kwargs
+        )
 
     def assert_xpath(self, path):
         self.xpath(path)

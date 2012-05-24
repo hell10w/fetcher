@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from urlparse import urljoin
 from StringIO import StringIO
 from Cookie import SimpleCookie
 
@@ -33,6 +34,10 @@ class CurlFetcher(BaseFetcher):
         curl.setopt(pycurl.CONNECTTIMEOUT, task.request.connection_timeout or 0)
         curl.setopt(pycurl.TIMEOUT, task.request.overall_timeout or 0)
 
+        # TODO: тут все через задницу
+        if task.request.url:
+            if not task.request.url[:7].lower().startswith('http://'):
+                task.request.url = urljoin(task.response.url, task.request.url)
         curl.setopt(pycurl.URL, task.request.url)
 
         task.request.method = task.request.method.upper()

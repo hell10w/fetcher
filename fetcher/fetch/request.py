@@ -36,7 +36,7 @@ class Request(object):
     overall_timeout = None
 
     # поведение транспорта по сохранению ответа сервера
-    body_destination = FILE_RESPONSE_BODY
+    body_destination = AUTO_RESPONSE_BODY
 
     temp_file_options = None
 
