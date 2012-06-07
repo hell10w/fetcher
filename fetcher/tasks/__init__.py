@@ -88,7 +88,7 @@ class TasksGroup(object):
 class Tasks(object):
     '''Менеджер задач'''
 
-    def __init__(self, **kwargs):
+    def __init__(self, queue=MemoryQueue, threads_count=20, **kwargs):
         '''
         Конструктор менеджера задач.
         Параметры:
@@ -96,8 +96,8 @@ class Tasks(object):
                 Может принимать следующие значения: memory, mongo
         '''
 
-        self._queue = kwargs.pop('queue', MemoryQueue)(**kwargs)
-        self._queue_size = kwargs.get('threads_count', 20) * 2
+        self._queue = queue(**kwargs)
+        self._queue_size = threads_count * 2
 
     def add_task(self, task=None, **kwargs):
         '''

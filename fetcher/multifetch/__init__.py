@@ -7,6 +7,9 @@ from fetcher.multifetch.dispatcher import Dispatcher
 class MultiFetcher(object):
     '''Менеджер асинхроной работы'''
 
+    # имя паука - для отображения в админке. по-умолчанию - имя класса
+    name = None
+
     def __init__(self, **kwargs):
         '''
         Конструктор менеджера асинхроной работы.

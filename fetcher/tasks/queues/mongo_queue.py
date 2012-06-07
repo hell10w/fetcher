@@ -12,29 +12,29 @@ from fetcher.errors import FetcherException
 
 
 class MongoQueue(Queue):
-    def __init__(self, **kwargs):
-        self.database_name = kwargs.pop('database', 'MongoQueue')
-        self.collection_name = kwargs.pop('name', None)
-        self.clear_on_init = kwargs.pop('clear_on_init', False)
-        self.clear_on_del = kwargs.pop('clear_on_del', False)
+    def __init__(self, database='MongoQueue', name=None, clear_on_init=False, clear_on_del=True, maximal_size=0, **kwargs):
+        self._database_name = database
+        self._collection_name = name
+        self._clear_on_init = clear_on_init
+        self._clear_on_del = clear_on_del
 
-        Queue.__init__(self, maxsize=kwargs.pop('maxsize', 0))
+        Queue.__init__(self, maxsize=maximal_size)
 
     def __del__(self):
-        if self.clear_on_del:
+        if self._clear_on_del:
             self.clear()
 
     def _init(self, maxsize):
         connection = Connection()
-        database = connection[self.database_name]
+        database = connection[self._database_name]
 
-        if self.collection_name:
-            self.collection = database[self.collection_name]
-            if self.clear_on_init:
+        if self._collection_name:
+            self.collection = database[self._collection_name]
+            if self._clear_on_init:
                 self.clear()
         else:
-            self.clear_on_init = False
-            self.clear_on_del = True
+            self._clear_on_init = False
+            self._clear_on_del = True
 
             def create_collection():
                 for index in xrange(maxint):

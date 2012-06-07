@@ -27,7 +27,7 @@ class LXMLExtension(BaseExtension):
     @property
     def html_tree(self):
         if not hasattr(self, '_html_tree'):
-            body = self.response.get_body()
+            body = self.response.content
             if not body:
                 body = '<html></html>'
             self._html_tree = html_fromstring(body)
@@ -36,7 +36,7 @@ class LXMLExtension(BaseExtension):
     @property
     def xml_tree(self):
         if not hasattr(self, '_xml_tree'):
-            body = self.response.get_unicode_body()
+            body = self.response.content
             if not body:
                 body = '<html></html>'
             self._xml_tree = xml_fromstring(body)

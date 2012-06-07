@@ -7,7 +7,7 @@ from fetcher import MultiFetcher, TasksGroup, Task
 
 class QipRu(MultiFetcher):
     def tasks_generator(self):
-        self.tasks.add_task(
+        yield Task(
             url='http://qip.ru/reg/register',
             handler='main'
         )
@@ -33,7 +33,7 @@ class QipRu(MultiFetcher):
         for script in scripts:
             remote_script_task = loaded_scripts[script.attrib['src']].task
             remote_script = remote_script_task.response.get_unicode_body()
-            script.text = '// -*- coding: utf-8 -*-\n' + remote_script
+            script.text = remote_script
             del script.attrib['src']
 
         group.task.response.body = group.task.save_html_content()

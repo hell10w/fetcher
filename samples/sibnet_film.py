@@ -1,8 +1,24 @@
 # -*- coding: utf-8 -*-
 
 import re
+from logging import getLogger
 
 from fetcher import MultiFetcher, Task, Structure as x
+from fetcher.frontend import FlaskFrontend, database, model
+
+
+logger = getLogger('fetcher.moviefinder')
+
+
+class Movie(model):
+    id = database.Column(database.Integer, primary_key=True)
+    url = database.Column(database.String(80), unique=True)
+
+    def __init__(self, url):
+        self.url = url
+
+    def __repr__(self):
+        return '<Movie %r>' % self.url
 
 
 class MovieFinder(MultiFetcher):
@@ -17,13 +33,14 @@ class MovieFinder(MultiFetcher):
     )
 
     def on_start(self):
+        logger.debug(u'Добавление инициирующей задачи')
         yield Task(
             url='http://mix.sibnet.ru/movie/',
             handler='prepare'
         )
 
     def task_prepare(self, task, error=None):
-        if task.response.code != 200:
+        if task.response.status_code != 200:
             yield task
             return
 
@@ -33,22 +50,29 @@ class MovieFinder(MultiFetcher):
         )
         index = int(index.group(0))
 
+        logger.debug(u'На сайте №%d страниц со списками фильмов' % index)
+
         self.restart_tasks_generator(
-            generator=self.pages_tasks_generator(index)
+            generator=self.pages_tasks_generator(20)
         )
+        #generator=self.pages_tasks_generator(index)
 
     def pages_tasks_generator(self, count):
-        #for index in xrange(1, count + 1):
-        for index in xrange(1, 2):
+        #for index in xrange(1, 2):
+        for index in xrange(1, count + 1):
+            logger.debug(u'Добавление в задачи страницы №%d со списком фильмов' % index)
             yield Task(
                 url='http://mix.sibnet.ru/movie/page,%d/' % index,
                 handler='page'
             )
 
     def task_page(self, task, error=None):
-        if task.response.code != 200:
+        if task.response.status_code != 200:
+            logger.debug(u'Код возврата неверный (!=200) - повтор задачи')
             yield task
             return
+
+        logger.debug(u'Задача выполнена %s успешно' % task.request.url)
 
         items = task.structured_xpath(
             '//div[@class="b-mini-card"]/div/div',
@@ -73,6 +97,8 @@ class MovieFinder(MultiFetcher):
             ),
             img='./a[1]/img/@src'
         )
+
+        logger.debug(u'Извлечено %d фильмов' % len(items))
 
         #
         # И Л И
@@ -106,17 +132,18 @@ class MovieFinder(MultiFetcher):
         )
         '''
 
-        for item in items:
+        '''for item in items:
             for key, value in item.iteritems():
                 print '%-11s: %s' % (
                     MovieFinder.ROWS[key],
                     value
                 )
-            print
+            print'''
 
 
 if __name__ == '__main__':
-    spider = MovieFinder(
-        threads_count=3
+    frontend = FlaskFrontend(
+        MovieFinder,
+        connection_string='sqlite:///movies.db'
     )
-    spider.start()
+    frontend.run()

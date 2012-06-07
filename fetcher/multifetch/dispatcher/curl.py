@@ -10,10 +10,10 @@ from fetcher.errors import TimeoutError, ConnectionError, AuthError, NetworkErro
 class CurlDispatcher(BaseDispatcher):
     '''Менеджер задач на основе CurlMulti'''
 
-    def __init__(self, **kwargs):
+    def __init__(self, threads_count=20, **kwargs):
         super(CurlDispatcher, self).__init__()
 
-        self.threads_count = kwargs.get('threads_count', 20)
+        self.threads_count = threads_count
 
         self.fetcher = Fetcher()
 

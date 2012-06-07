@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% from '_helpers.html' import render_form with context %}
+
+{% block title %}
+    Main
+{% endblock %}
+
+{% block head %}
+    {% if spider_working %}
+        <script src="{{ url_for('static', filename='js/jquery-1.7.2.js') }}"></script>
+        <script src="{{ url_for('static', filename='bootstrap/js/bootstrap-collapse.js') }}"></script>
+        <script>
+            $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+            var last_time = 0;
+
+            jQuery(function($) {
+                function status_updater() {
+                    $.getJSON($SCRIPT_ROOT + '{{ url_for("statistics") }}', function(data){
+                            if(data.result){
+                                $("#statistics").empty();
+                                for(var key in data.result)
+                                    $("#statistics").append('<p>'+data.result[key]+'</p>');
+                            }
+                        }
+                    );
+                    $.get($SCRIPT_ROOT + '{{ url_for("is_working") }}', function(data) {
+                            if(!data.result)
+                                window.location.reload();
+                        }
+                    );
+                };
+
+                status_updater();
+                setInterval(status_updater, 1000);
+
+                {% if show_log %}
+                    function logs_updater(){
+                        $.get($SCRIPT_ROOT + '{{ url_for("logs") }}', {last_time: last_time}, function(data) {
+                                    last_time = data.result.time;
+                                    for(var key in data.result.log){
+                                        var item = data.result.log[key];
+                                        $("#log").append(
+                                                '<p><strong>+'+item.offset.toFixed(1)+'s</strong> '+item.msg+'</p>'
+                                        );
+                                    }
+                                    items = $('#log p');
+                                    $('#log p').slice(0, items.length - 10).remove();
+                                }
+                        );
+                    }
+                    setInterval(logs_updater, 300);
+                {% endif %}
+            });
+
+        </script>
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+    {% if spider_working %}
+        <div class="row">
+            <div class="alert alert-success span6 offset3">
+                <button class="close" data-dismiss="alert">×</button>
+                <strong>Parser enabled!</strong>
+                Parser is working now. Press stop button for terminate it.
+            </div>
+        </div>
+        <div class="row">
+            <div class="span8 offset2">
+                <div id="stat_accordion" class="accordion">
+                    <div class="accordion-group">
+                        <div class="accordion-heading">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#stat_accordion" href="#collapseStat">
+                                Statistics
+                            </a>
+                        </div>
+                        <div style="height: 0px;" id="collapseStat" class="accordion-body collapse">
+                            <div class="accordion-inner" id="statistics">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if show_log %}
+            <div class="row">
+                <div class="span8 offset2">
+                    <div id="log_accordion" class="accordion">
+                        <div class="accordion-group">
+                            <div class="accordion-heading">
+                                <a class="accordion-toggle" data-toggle="collapse" data-parent="#log_accordion" href="#collapseLog">
+                                    Log
+                                </a>
+                            </div>
+                            <div style="height: 0px;" id="collapseLog" class="accordion-body collapse">
+                                <div class="accordion-inner" id="log">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        <div class="row">
+            <div class="span2 offset5" style="text-align:center">
+                {% if form %}
+                    <form method="POST" action="{{ url_for('stop') }}" class="form-inline">
+                        <img src="{{ url_for('static', filename='img/loader.gif') }}"/>
+                        <input type="submit" class="btn btn-inverse" value=" Stop " />
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="row">
+            <div class="alert alert-info span6 offset3">
+                <button class="close" data-dismiss="alert">×</button>
+                <strong>Parser disabled!</strong>
+                Set options and press start button for execute.
+            </div>
+        </div>
+        {% if form %}
+            <div class="row">
+                <div class="span6 offset3">
+                    {{ render_form(form, 'Start', url_for('start')) }}
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+
