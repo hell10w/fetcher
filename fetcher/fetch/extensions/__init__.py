@@ -2,8 +2,8 @@
 
 from forms_ext import FormsExtension
 from lxml_ext import LXMLExtension, Structure, Chunk
-from js_ext import JSExtension
+#from js_ext import JSExtension
 
 
-class Extensions(LXMLExtension, FormsExtension, JSExtension):
+class Extensions(LXMLExtension, FormsExtension):
     pass
