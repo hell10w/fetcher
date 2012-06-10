@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from fetcher.cache import CacheExtension
 from fetcher.tasks import Task, TaskResult, TasksGroup, Tasks
 from fetcher.multifetch.dispatcher import Dispatcher
 
@@ -9,6 +10,10 @@ class MultiFetcher(object):
 
     # имя паука - для отображения в админке. по-умолчанию - имя класса
     name = None
+    # статистика
+    processed_tasks = 0
+    transfer_size = 0
+    transfer_time = 0
 
     def __init__(self, **kwargs):
         '''
@@ -18,6 +23,7 @@ class MultiFetcher(object):
         '''
         self.dispatcher = Dispatcher(**kwargs)
         self.tasks = Tasks(**kwargs)
+        self.cache_extension = CacheExtension(**kwargs)
 
         self.restart_tasks_generator(generator=self.tasks_generator())
 
@@ -27,14 +33,24 @@ class MultiFetcher(object):
         self._process_for_tasks(self.on_start())
 
         try:
+            self.processed_tasks = 0
+            self.transfer_size = 0
+            self.transfer_time = 0
+
             self._should_stop = False
 
-            self._process_for_tasks(self._process_tasks_generator)
+            self._process_for_tasks(self._process_tasks_generator, limit=True)
 
             while not self._should_stop:
                 while not self.dispatcher.is_full() and not self.tasks.empty():
                     _, task = self.tasks.get_task()
                     if task:
+                        if self.cache_extension.is_process_tasks:
+                            without_process, task, error = self.cache_extension.process_task(task)
+                            if without_process:
+                                self._process_finished_task(task, error)
+                                self._process_for_tasks(self._process_tasks_generator, limit=True)
+                                continue
                         self.dispatcher.process_task(task)
 
                 if self.dispatcher.is_empty():
@@ -43,9 +59,11 @@ class MultiFetcher(object):
                 self.dispatcher.wait_available()
 
                 for finished_task, error in self.dispatcher.finished_tasks():
+                    if self.cache_extension.is_process_tasks:
+                        self.cache_extension.store_task(finished_task, error)
                     self._process_finished_task(finished_task, error)
 
-                self._process_for_tasks(self._process_tasks_generator)
+                self._process_for_tasks(self._process_tasks_generator, limit=True)
 
                 self.on_loop()
 
@@ -87,6 +105,7 @@ class MultiFetcher(object):
         '''Перезапуск генератора задач'''
         self.tasks_generator_object = generator
         self.tasks_generator_enabled = True
+        self._process_for_tasks(self._process_tasks_generator, limit=True)
 
     def groups_collector(self, group):
         '''Сюда стекаются все выполненные группы у которых нет обработчиков'''
@@ -132,6 +151,10 @@ class MultiFetcher(object):
         if not task:
             return
 
+        self.processed_tasks += 1
+        self.transfer_size += task.response.size
+        self.transfer_time += task.response.total_time
+
         args = [task]
         if error:
             args.append(error)
@@ -144,10 +167,14 @@ class MultiFetcher(object):
         if callable(handler):
             self._process_for_tasks(handler(*args))
 
-    def _process_for_tasks(self, generator):
+    def _process_for_tasks(self, generator, limit=None):
         '''Извлекает и добавляет в очередь задания из функции'''
         if not generator:
             return
+
+        if limit:
+            if self.tasks.full():
+                return
 
         for task in generator() if callable(generator) else generator:
             if isinstance(task, Task):
@@ -155,3 +182,7 @@ class MultiFetcher(object):
 
             elif isinstance(task, TasksGroup):
                 self.tasks.add_group(task)
+
+            if limit:
+                if self.tasks.full():
+                    return

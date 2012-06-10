@@ -4,12 +4,14 @@ from urlparse import urljoin
 from StringIO import StringIO
 from Cookie import SimpleCookie
 from urlparse import parse_qsl
+from urllib import quote
 
 import pycurl
 
 from fetcher.fetch.request import MEMORY_RESPONSE_BODY, FILE_RESPONSE_BODY, AUTO_RESPONSE_BODY
 from fetcher.fetch.transport.base import BaseFetcher
 from fetcher.fetch.response import Response
+from fetcher.fetch.temporaryfile import TempFile
 
 
 class CurlFetcher(BaseFetcher):
@@ -38,10 +40,15 @@ class CurlFetcher(BaseFetcher):
         curl.setopt(pycurl.TIMEOUT, task.request.overall_timeout or 0)
 
         # TODO: тут все через задницу
-        if task.request.url:
-            if not task.request.url[:7].lower().startswith('http://'):
-                task.request.url = urljoin(task.response.url, task.request.url)
-        curl.setopt(pycurl.URL, task.request.url)
+        url = task.request.url
+        if url:
+            if not url[:7].lower().startswith('http://'):
+                url = urljoin(task.response.url, url)
+        if not isinstance(url, (str, unicode)):
+            raise TypeError(u'Неправильный тип URL: %s' % type(url))
+        if isinstance(url, unicode):
+            url = str(quote(url, safe=':/&?.:='))
+        curl.setopt(pycurl.URL, url)
 
         task.request.method = task.request.method.upper()
 

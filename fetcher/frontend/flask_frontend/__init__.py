@@ -22,10 +22,13 @@ fetcher_logger.setLevel(DEBUG)
 
 
 class CacheHandler(Handler):
+    instance = None
     STORE_SIZE = 10
     items = OrderedDict()
 
     def emit(self, record):
+        if not Frontend.current:
+            return
         now = time()
         CacheHandler.items[now] = (
             now - Frontend.current._start_time,
@@ -33,9 +36,6 @@ class CacheHandler(Handler):
         )
         if len(CacheHandler.items) > CacheHandler.STORE_SIZE:
             CacheHandler.items.popitem(last=False)
-
-
-fetcher_logger.addHandler(CacheHandler())
 
 
 class Frontend(object):
@@ -61,7 +61,7 @@ class Frontend(object):
             self.run_kwargs.setdefault('port', port)
         if not only_local:
             self.run_kwargs.setdefault('host', '0.0.0.0')
-        self.run_kwargs.setdefault('debug', True)
+        #self.run_kwargs.setdefault('debug', True)
 
         if connection_string:
             app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
@@ -72,6 +72,15 @@ class Frontend(object):
             database.session.add(User('admin', 'admin', True))
             database.session.commit()
         app.run(**self.run_kwargs)
+
+    def add_view(self, model, name=None):
+        admin.admin.add_view(
+            admin.ProtectedView(
+                model,
+                database.session,
+                name=name or model.__name__
+            )
+        )
 
     @property
     def is_spider_working(self):
@@ -88,12 +97,28 @@ class Frontend(object):
         return time() - self._start_time
 
     def get_statistics(self):
+        if self._spider:
+            queue_size = '%d tasks' % self._spider.tasks.size()
+            transfer_time = '%.2f sec.' % self._spider.transfer_time
+            transfer_size = '%d bytes' % self._spider.transfer_size
+            processed_tasks = '%d' % self._spider.processed_tasks
+        else:
+            queue_size = '?'
+            transfer_time = '?'
+            transfer_size = '?'
+            processed_tasks = '?'
         return [
-            'Work time: %.2f seconds' % self.work_time,
-            'Queue size: %d' % self._spider.tasks.size()
+            'Work time: %.2f sec.' % self.work_time,
+            'Queue size: ' + queue_size,
+            'Transfer time: ' + transfer_time,
+            'Transfer size: ' + transfer_size,
+            'Processed tasks: ' + processed_tasks
         ]
 
     def _start(self, **kwargs):
+        if not CacheHandler.instance:
+            CacheHandler.instance = CacheHandler()
+            fetcher_logger.addHandler(CacheHandler.instance)
         try:
             self._start_time = time()
             self._spider = self._spider_class(**kwargs)

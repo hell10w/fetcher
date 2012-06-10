@@ -18,10 +18,21 @@ class Response(object):
 
     total_time = None
 
+    is_from_cache = None
+
     def __init__(self, **kwargs):
         self._content = None
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
+
+    @property
+    def size(self):
+        if not self.body:
+            return 0
+        if isinstance(self.body, TempFile):
+            return self.body.size
+        else:
+            return len(self.body)
 
     @property
     def content(self):
@@ -76,3 +87,11 @@ class Response(object):
             if key != 'body' and not key.startswith('_')
         )
         return Response(**_kwargs).setup(**kwargs)
+
+    def clone_for_cache(self):
+        _kwargs = dict(
+            (key, value)
+            for key, value in self.__dict__.iteritems()
+            if not key.startswith('_')
+        )
+        return Response(**_kwargs)

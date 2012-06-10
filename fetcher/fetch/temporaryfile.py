@@ -60,6 +60,10 @@ class TempFile(object):
             self.file.close()
             self.file = None
 
+    @property
+    def size(self):
+        return os.path.getsize(self.name)
+
     def write(self, data):
         '''Запись данных в конец файла'''
         self._open_file()

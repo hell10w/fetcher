@@ -106,6 +106,7 @@
             <div class="span2 offset5" style="text-align:center">
                 {% if form %}
                     <form method="POST" action="{{ url_for('stop') }}" class="form-inline">
+                        {{ form.hidden_tag() }}
                         <img src="{{ url_for('static', filename='img/loader.gif') }}"/>
                         <input type="submit" class="btn btn-inverse" value=" Stop " />
                     </form>

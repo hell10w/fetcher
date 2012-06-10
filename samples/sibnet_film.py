@@ -18,7 +18,7 @@ class Movie(model):
         self.url = url
 
     def __repr__(self):
-        return '<Movie %r>' % self.url
+        return '<Project %r>' % self.url
 
 
 class MovieFinder(MultiFetcher):
