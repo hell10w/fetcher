@@ -31,7 +31,7 @@ class CacheItem(Base):
 class MySQLCacheBackend(CacheBackend):
     '''Реализация для хранения кэша в mongo'''
 
-    def __init__(self, cache_database=None):
+    def __init__(self, cache_database=None, *args, **kwargs):
         if not cache_database:
             raise Exception(u'Необходимо указать строку для подключения к БД!')
 

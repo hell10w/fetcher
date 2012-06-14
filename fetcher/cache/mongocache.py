@@ -17,7 +17,7 @@ logger = getLogger('fetcher.cache.mongocache')
 class MongoCacheBackend(CacheBackend):
     '''Реализация для хранения кэша в mongo'''
 
-    def __init__(self, cache_database=None):
+    def __init__(self, cache_database=None, *args, **kwargs):
         connection = Connection()
         database = connection[cache_database or 'FetcherCache']
         self._collection = database['cache']
