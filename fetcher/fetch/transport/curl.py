@@ -171,7 +171,7 @@ class CurlResponse(Response):
         self.headers = {}
         if not self.header_chunks:
             return
-            # обход пока не код ответа
+        # обход пока не код ответа
         for line in self.header_chunks[::-1]:
             line = line.strip()
             if line.startswith('HTTP/'):

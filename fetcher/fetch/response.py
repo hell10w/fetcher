@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from logging import getLogger
+
 from fetcher.fetch.temporaryfile import TempFile
+
+
+logger = getLogger('fetcher.fetch.response')
 
 
 class Response(object):

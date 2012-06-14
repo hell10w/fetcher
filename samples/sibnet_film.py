@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import re
-from logging import getLogger
+from logging import getLogger, basicConfig, DEBUG
 
-from fetcher import MultiFetcher, Task, Structure as x
-from fetcher.frontend import FlaskFrontend, database, model
+from fetcher import MultiFetcher, Task, Structure as x, Response
+#from fetcher.frontend import FlaskFrontend, database, model
 
 
 logger = getLogger('fetcher.moviefinder')
 
 
-class Movie(model):
+Task.debug_headers = True
+
+
+'''class Movie(model):
     id = database.Column(database.Integer, primary_key=True)
     url = database.Column(database.String(80), unique=True)
 
@@ -18,7 +21,7 @@ class Movie(model):
         self.url = url
 
     def __repr__(self):
-        return '<Project %r>' % self.url
+        return '<Project %r>' % self.url'''
 
 
 class MovieFinder(MultiFetcher):
@@ -142,8 +145,13 @@ class MovieFinder(MultiFetcher):
 
 
 if __name__ == '__main__':
-    frontend = FlaskFrontend(
+    basicConfig(level=DEBUG)
+
+    '''frontend = FlaskFrontend(
         MovieFinder,
         connection_string='sqlite:///movies.db'
     )
-    frontend.run()
+    frontend.run()'''
+
+    worker = MovieFinder(threads_count=3)
+    worker.start()
