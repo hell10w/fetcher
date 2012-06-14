@@ -8,10 +8,8 @@ from pymongo import Connection
 
 from lxml.html import tostring
 from werkzeug.urls import url_fix
-from sqlalchemy.sql.expression import or_, not_, and_
 
 from fetcher import MultiFetcher, MongoCacheBackend, CACHE_RESPONSE, Task, Structure as x, Chunk as c, Request, MEMORY_RESPONSE_BODY
-from fetcher.frontend.flask_frontend import Frontend, app, database, model
 
 
 Request.body_destination = MEMORY_RESPONSE_BODY
