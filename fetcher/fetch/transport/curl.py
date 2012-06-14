@@ -158,6 +158,10 @@ class CurlResponse(Response):
     '''Curl-специфичная часть класса ответа сервера'''
     header_chunks = []
 
+    def __init__(self, *args, **kwargs):
+        self.header_chunks = []
+        super(CurlResponse, self).__init__(*args, **kwargs)
+
     def _process_headers(self):
         '''Объединение заголовков ответа в словарь'''
         # если это уже сделано - выход
