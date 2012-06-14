@@ -1,113 +1,183 @@
 # -*- coding: utf-8 -*-
 
-from time import time
 from logging import getLogger, basicConfig, DEBUG
 
 from lxml.html import tostring
 from werkzeug.urls import url_fix
 from sqlalchemy.sql.expression import or_, not_, and_
 
-from fetcher import MultiFetcher, CACHE_RESPONSE, Task, Structure as x, Chunk as c
+from fetcher import MultiFetcher, MongoCacheBackend, MySQLCacheBackend, \
+                    CACHE_RESPONSE, Task, \
+                    Structure as x, Chunk as c, Request, MEMORY_RESPONSE_BODY
 from fetcher.frontend.flask_frontend import Frontend, app, database, model
 
 
+Request.body_destination = MEMORY_RESPONSE_BODY
+
+
 WORKER_IN_FRONTEND = 0
-CONNECTION_STRING = 'sqlite:///mcgrp.db'
-#CONNECTION_STRING = 'mysql://root:654321@localhost/mcgrp'
+#CONNECTION_STRING = 'sqlite:///mcgrp.db'
+CONNECTION_STRING = 'mysql://root:654321@localhost/mcgrp'
 
 
 logger = getLogger('fetcher.worker')
 
 
 class Url(model):
-    MAGIC = int(time())
-    NEW_URL, LOOKING, MAP_URL, BOOK_URL = range(4)
+    NEW_URL, LOOKING, MAP_URL, PAGE_URL = range(4)
 
     id = database.Column(database.Integer, primary_key=True)
+
     url = database.Column(database.Text) #, unique=True)
+
+    level = database.Column(database.Integer)
     type_ = database.Column(database.Integer)
 
-    magic = database.Column(database.Integer)
-
     def __init__(self, **kwargs):
-        kwargs.setdefault('magic', Url.MAGIC)
+        kwargs.setdefault('type_', Url.NEW_URL)
         super(Url, self).__init__(**kwargs)
 
 
-class McgrpRu(MultiFetcher):
-    def on_start(self):
-        task, record = self.get_url('http://mcgrp.ru')
-        if task:
-            if record:
-                record.type_ = Url.LOOKING
-                database.session.commit()
-            yield task
+class Page(model):
+    id = database.Column(database.Integer, primary_key=True)
 
-    def get_url(self, url, make_task=True, make_record=True):
-        task = None
-        url = unicode(url.rstrip('/'))
-        url = url_fix(url)
+    url = database.Column(database.Text)
+
+    code = database.Column(database.String(16))
+
+    class_ = database.Column(database.Text)
+    group = database.Column(database.Text)
+    name = database.Column(database.Text)
+
+    type_ = database.Column(database.String(16))
+    size_ = database.Column(database.String(16))
+
+    image_url = database.Column(database.Text)
+    image = database.Column(database.BLOB)
+
+    description = database.Column(database.Text)
+
+
+PREPARE_MAP, PREPARE_MAP_ERRORS, PREPARE_PAGE, PREPARE_IMAGE = range(4)
+
+
+class McgrpRu(MultiFetcher):
+    work_type = PREPARE_MAP
+
+    def on_start(self):
+        if self.work_type == PREPARE_MAP:
+            logger.info(u'Создание инициальной задачи')
+            self.store_url('http://mcgrp.ru', commit=True)
+
+        self.restart_tasks_generator(self.tasks_generator())
+
+    def clear_urls(self):
+        logger.info(u'Очистка таблицы. Старых записей - %d' % Url.query.count())
+        for urls in Url.query.yield_per(100):
+            database.session.delete(urls)
+        database.session.commit()
+
+    def save_state(self, url, state, commit=True):
+        record = Url.query.filter_by(url=self.fix_url(url)).first()
+        if not record:
+            logger.error(u'Не найден Url для сохранения состяния проверенности - %s!' % task.request.url)
+            return
+        record.type_ = state
+        if commit:
+            database.session.commit()
+
+    def fix_url(self, url):
+        return url_fix(unicode(url.rstrip('/')))
+
+    def store_url(self, url, level=0, commit=False):
+        url = self.fix_url(url)
         record = Url.query.filter_by(url=url).first()
-        if make_record and not record:
+        if record:
+            return
+        else:
             record = Url(
                 url=url,
-                type_=Url.NEW_URL
+                level=level
             )
             database.session.add(record)
-        if make_task:
-            task = Task(
-                url=unicode(url),
-                handler='check'
-            )
-        return task, record
 
-    def save_state(self, url, state):
-        _, record = self.get_url(url, make_task=False, make_record=False)
-        if record:
-            record.type_ = state
+        if commit:
             database.session.commit()
-        else:
-            logger.error(u'Существует URL отличный от сохраненного - его состояние не будет изменено!')
 
-    def exists_tasks(self):
-        return Url.query.filter(
-            and_(
-                not_(Url.magic==Url.MAGIC),
-                not_(Url.type_==Url.LOOKING)
-            )
-        ).count()
+    def tasks_generator(self):
+        if self.work_type == PREPARE_MAP:
+            while True:
+                urls = Url.query.filter(and_(Url.type_ == Url.NEW_URL, Url.level < 2)).limit(20).all()
+                if not urls:
+                    break
 
-    def urls_processor(self):
-        while self.exists_tasks():
-            urls = Url.query.filter(
-                and_(
-                    not_(Url.magic==Url.MAGIC),
-                    not_(Url.type_==Url.LOOKING)
-                )
-            ).limit(20)
-            for url in urls:
-                url.type_ = url.LOOKING
-                url.magic = url.MAGIC
+                for url in urls:
+                    task = Task(
+                        url=url.url,
+                        level=url.level,
+                        handler='map'
+                    )
+                    url.type_ = Url.LOOKING
+                    yield task
+
                 database.session.commit()
-                task, _ = self.get_url(url.url, make_record=False)
+
+        elif self.work_type == PREPARE_MAP_ERRORS:
+            urls = Url.query.filter(and_(Url.type_ == Url.LOOKING, Url.level < 2)).all()
+            logger.info(u'В базе %d отработавших с ошибкой Url.' % len(urls))
+            for url in urls:
+                task = Task(
+                    url=url.url,
+                    level=url.level,
+                    handler='map'
+                )
                 yield task
+
+        elif self.work_type == PREPARE_PAGE:
+            urls = Url.query.filter_by(type_=Url.LOOKING, level=2).all()
+            if urls:
+                logger.error(u'Незаконченных задач с прошлой сессии: %d' % len(urls))
+            else:
+                urls = Url.query.filter_by(type_=Url.NEW_URL, level=2).limit(20).all()
+
+            while urls:
+                if not urls:
+                    break
+
+                for url in urls:
+                    task = Task(
+                        url=url.url,
+                        handler='page'
+                    )
+                    url.type_ = Url.LOOKING
+                    yield task
+
+                database.session.commit()
+
+                urls = Url.query.filter_by(type_=Url.NEW_URL, level=2).limit(20).all()
+
+        elif self.work_type == PREPARE_IMAGE:
+            pass
 
         logger.info(u'Url для проверки больше нет.')
         yield 0
 
-    def task_check(self, task, error=None):
-        if task.response.status_code != 200:
-            logger.error(u'Задача %s завершилась с ошибкой - повтор!' % task.request.url)
+    def task_map(self, task, error=None):
+        if error:
+            logger.error(u'Ошибка при загрузке %s. Повтор.' % task.request.url)
             yield task
             return
 
-        if task.xpath_exists('//*[@name="subBuy"]'):
-            self.prepare_page(task)
-        else:
-            self.prepare_map(task)
+        if task.level > 1:
+            logger.error(u'Уровень вложенности > 2 на %s' % task.response.url)
+            return
 
-    def prepare_map(self, task):
-        task.make_links_absolute()
+        try:
+            task.make_links_absolute()
+        except:
+            print task.response, task.response.url
+            return
+
         urls = set(task.xpath_list('//div[@id="content"]//a[starts-with(@href, "http://mcgrp.ru/")]/@href'))
 
         logger.info(u'Найдено %d ссылок на странице %s %s' %
@@ -120,48 +190,88 @@ class McgrpRu(MultiFetcher):
 
         if urls:
             for url in urls:
-                self.get_url(url, make_task=False)
+                self.store_url(url, level=task.level + 1)
             database.session.commit()
 
         if not self.tasks_generator_enabled:
-            if self.exists_tasks():
+            if Url.query.filter(and_(Url.type_==Url.NEW_URL, Url.level < 2)).count():
                 logger.info(u'Перезапуск генератора задач')
-                self.restart_tasks_generator(self.urls_processor())
+                self.restart_tasks_generator(self.tasks_generator())
 
         self.save_state(task.request.url, Url.MAP_URL)
 
-    def prepare_page(self, task):
-        item = task.structured_xpath(
-            '//div[@id="content"]',
-            x(
-                './table[4]/tbody/tr',
-                class_='./td[1]/text()',
-                group='./td[2]/text()',
+    def task_page(self, task, error=None):
+        if error:
+            logger.error(u'Ошибка при загрузке %s. Повтор.' % task.request.url)
+            yield task
+            return
 
+        if Page.query.filter_by(url=task.request.url).first():
+            logger.error(u'Дублирование задачи для %s!' % task.request.url)
+            self.save_state(task.request.url, Url.PAGE_URL)
+            return
+
+        item = None
+
+        try:
+            content = task.xpath('//div[@id="content"]')
+
+            item = task.structured_xpath(
+                '//div[@id="content"]',
+                x(
+                    './table[4]/tr',
+                    class_='./td[1]/text()',
+                    group='./td[2]/text()',
                 ),
-            x(
-                './/*[@id="fd_3"]',
-                name='./h2/text()',
-                description='./p/text()'
-            ),
-            #tables=c(
-            #    './/table[@class="descr_table"]',
-            #    apply_func=tostring,
-            #    one=False
-            #),
-            brand='./h3[1]/text()',
-            filetype='./h3[2]/text()',
-            filesize='./b[2]/text()',
-            image='./a/img/@src'
+                name_1='.//*[@id="fd_3"]/h2/text()',
+                name_2=c('./div[1]/span[3]', apply_func=lambda item: item.text_content()),
+                description=c('./div[@id="download_form"]/preceding-sibling::*[preceding-sibling::b[2]]', apply_func=tostring, one=False),
+                brand='./h3[1]/text()',
+                filetype='./h3[2]/text()',
+                filesize='./b[2]/text()',
+                image='./a/img/@src'
+            )[0]
+        except IndexError:
+            logger.error(u'Не найдена структура товара на странице %s!' % task.request.url)
+        except:
+            logger.error(u'Неизвестная ошибка при разборе структуры товара на странице %s!' % task.request.url)
+
+        if not item:
+            task.no_cache = True
+            yield task
+            return
+
+        '''print '%s > %s, %s > %s, %s (%s)  - %s' % (
+            item.brand, item.name_1 or item.name_2,
+            item.class_, item.group,
+            item.filetype, item.filesize,
+            task.request.url
+        )'''
+
+        item['description'] = ''.join(item.description or [])
+
+        for key, value in item.iteritems():
+            if value:
+                try:
+                    item[key] = value.encode('unicode_escape')
+                except:
+                    print key, value
+                    raise Exception
+
+        page = Page(
+            url=task.request.url,
+            class_=item.class_ or '',
+            group=item.group or '',
+            name=item.name_1 or item.name_2 or '',
+            type_=item.filetype or '',
+            size_=item.filesize or '',
+            image_url=item.image or '',
+            description=item.description or ''
         )
 
-        print len(item)
-        for p in item:
-            #print '-' * 20, len(p.tables)
-            for key, value in p.iteritems():
-                print '%-11s: %s' % (key, value)
+        database.session.add(page)
 
-        self.save_state(task.request.url, Url.BOOK_URL)
+        self.save_state(task.request.url, Url.PAGE_URL)
 
 
 if __name__ == '__main__':
@@ -170,8 +280,26 @@ if __name__ == '__main__':
 
     if not WORKER_IN_FRONTEND:
         basicConfig(level=DEBUG)
+
+        #database.drop_all()
         database.create_all()
-        worker = McgrpRu(cache_type=CACHE_RESPONSE)
+
+        McgrpRu.work_type = PREPARE_PAGE
+
+        worker = McgrpRu(
+            cache_type=CACHE_RESPONSE,
+            #cache_backend=MySQLCacheBackend,
+            #cache_database='mysql://root:654321@localhost/fetcher_cache'
+            cache_backend=MongoCacheBackend
+        )
         worker.start()
+
+        worker.render_stat()
+        print '-' * 80
+        print u'Количество страниц со списком инструкций: %d' % Url.query.filter(Url.level <= Url.LOOKING).count()
+        print u'Количество страниц с инструкциями: %d' % Url.query.filter(Url.level > Url.LOOKING ).count()
+        print u'Описаний устройств: %d' % Page.query.count()
+        print u'Отсутствующих инструкций (с нулевым размером): %d' % Page.query.filter_by(size_=u'0Б'.encode('unicode_escape')).count()
+
     else:
         frontend.run()

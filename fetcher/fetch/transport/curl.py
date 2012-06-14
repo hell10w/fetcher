@@ -47,7 +47,10 @@ class CurlFetcher(BaseFetcher):
         if not isinstance(url, (str, unicode)):
             raise TypeError(u'Неправильный тип URL: %s' % type(url))
         if isinstance(url, unicode):
-            url = str(quote(url, safe=':/&?.:='))
+            try:
+                url = str(url.decode('utf-8'))
+            except UnicodeEncodeError:
+                url = str(quote(url, safe=':/&?.:='))
         curl.setopt(pycurl.URL, url)
 
         task.request.method = task.request.method.upper()

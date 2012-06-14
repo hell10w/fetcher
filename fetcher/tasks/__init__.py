@@ -7,7 +7,8 @@ from fetcher.fetch import Extensions, Response, Request
 class Task(Extensions):
     '''Отдельная задача'''
 
-    no_cache = False
+    no_cache_store = False
+    no_cache_restore = False
 
     def __init__(self, **kwarg):
         self.response = Response()

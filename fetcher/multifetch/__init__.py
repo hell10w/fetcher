@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 
+from time import time
+from logging import getLogger
+
 from fetcher.cache import CacheExtension
 from fetcher.tasks import Task, TaskResult, TasksGroup, Tasks
 from fetcher.multifetch.dispatcher import Dispatcher
+
+
+logger = getLogger('fetcher.multifetcher')
 
 
 class MultiFetcher(object):
@@ -11,7 +17,9 @@ class MultiFetcher(object):
     # имя паука - для отображения в админке. по-умолчанию - имя класса
     name = None
     # статистика
+    _start_time = 0
     processed_tasks = 0
+    processed_from_cache = 0
     transfer_size = 0
     transfer_time = 0
 
@@ -30,10 +38,13 @@ class MultiFetcher(object):
     def start(self):
         '''Стартует работу менеджера'''
 
+        self._start_time = time()
+
         self._process_for_tasks(self.on_start())
 
         try:
             self.processed_tasks = 0
+            self.processed_from_cache = 0
             self.transfer_size = 0
             self.transfer_time = 0
 
@@ -47,7 +58,8 @@ class MultiFetcher(object):
                     if task:
                         if self.cache_extension.is_process_tasks:
                             without_process, task, error = self.cache_extension.process_task(task)
-                            if without_process:
+                            if without_process and self.is_good_for_restore(task, error):
+                                self.processed_from_cache += 1
                                 self._process_finished_task(task, error)
                                 self._process_for_tasks(self._process_tasks_generator, limit=True)
                                 continue
@@ -60,7 +72,8 @@ class MultiFetcher(object):
 
                 for finished_task, error in self.dispatcher.finished_tasks():
                     if self.cache_extension.is_process_tasks:
-                        self.cache_extension.store_task(finished_task, error)
+                        if self.is_good_for_store(finished_task, error):
+                            self.cache_extension.store_task(finished_task, error)
                     self._process_finished_task(finished_task, error)
 
                 self._process_for_tasks(self._process_tasks_generator, limit=True)
@@ -71,6 +84,20 @@ class MultiFetcher(object):
             pass
 
         self.on_stop()
+
+    def render_stat(self):
+        print u'Общее время работы: %.2f секунд' % (time() - self._start_time)
+        print u'Обработано задач: %d (из кэша: %d)' % (self.processed_tasks, self.processed_from_cache)
+        print u'Суммарное время загрузки каждой задачи: %d секунд' % self.transfer_time
+        print u'Суммарный объем загруженных данных: %d байт' % self.transfer_size
+
+    def is_good_for_restore(self, task, error=None):
+        '''Годен ли таск для подмены из кэша'''
+        return not error and task.response and task.response.url and task.response.status_code == 200
+
+    def is_good_for_store(self, task, error=None):
+        '''Годен ли таск для сохранения в кэш'''
+        return not error and task.response and task.response.url and task.response.status_code == 200
 
     def stop(self):
         '''Останавливает работу менеджера'''
@@ -152,8 +179,8 @@ class MultiFetcher(object):
             return
 
         self.processed_tasks += 1
-        self.transfer_size += task.response.size
-        self.transfer_time += task.response.total_time
+        self.transfer_size += task.response.size or 0
+        self.transfer_time += task.response.total_time or 0
 
         args = [task]
         if error:

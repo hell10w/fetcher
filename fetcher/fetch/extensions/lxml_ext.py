@@ -10,7 +10,8 @@ from base import BaseExtension
 
 class DotDict(dict):
     def __getattr__(self, item):
-        return self[item]
+        if hasattr(self, item):
+            return self[item]
 
 
 class Chunk(object):
