@@ -1,7 +1,7 @@
 fetcher
 =============
 
-![fetcher](fetcher/frontend/flask_frontend/static/img/spider.png)
+![fetcher](fetcher/fetcher/frontend/flask_frontend/static/img/spider.png)
 
 
 Описание
