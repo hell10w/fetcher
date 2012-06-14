@@ -1,7 +1,7 @@
 fetcher
 =============
 
-![](https://github.com/alexey-grom/fetcher/fetcher/frontend/flask_frontend/static/img/spider.png)
+![fetcher](https://github.com/alexey-grom/fetcher/fetcher/frontend/flask_frontend/static/img/spider.png)
 
 Описание
 -------------
