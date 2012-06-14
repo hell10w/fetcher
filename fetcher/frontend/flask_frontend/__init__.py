@@ -3,7 +3,13 @@
 from logging import Handler, getLogger, DEBUG
 from threading import Thread
 from time import time
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    try:
+        from ordereddict import OrderedDict
+    except ImportError:
+        raise Exception(u'Для работы требуется OrderedDict')
 
 from flask import Flask, redirect, url_for, render_template, jsonify, request
 from flask.ext.login import login_required
