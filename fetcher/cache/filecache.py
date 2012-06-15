@@ -6,7 +6,7 @@ from logging import getLogger
 from zlib import compress, decompress
 from time import time
 from cPickle import dumps, loads
-from base64 import urlsafe_b64encode, urlsafe_b64decode
+from base64 import urlsafe_b64encode
 
 from base import CacheBackend
 
@@ -15,7 +15,7 @@ logger = getLogger('fetcher.cache.filecache')
 
 
 class FileCacheBackend(CacheBackend):
-    '''Реализация для хранения кэша в mongo'''
+    '''Реализация для хранения кэша в файлах в директории'''
 
     def __init__(self, cache_path=None, *args, **kwargs):
         self._cache_path = cache_path
