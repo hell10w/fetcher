@@ -11,7 +11,7 @@ from base64 import urlsafe_b64encode, urlsafe_b64decode
 from base import CacheBackend
 
 
-logger = getLogger('fetcher.cache.mongocache')
+logger = getLogger('fetcher.cache.filecache')
 
 
 class FileCacheBackend(CacheBackend):
