@@ -2,6 +2,7 @@
 
 from mongocache import MongoCacheBackend
 from mysqlcache import MySQLCacheBackend
+from filecache import FileCacheBackend
 
 
 # три вида кэша: выключенный, простое сохранение респонса, настоящий
@@ -15,7 +16,7 @@ CACHE_NONE, CACHE_RESPONSE, CACHE_TRUE = range(3)
 class CacheExtension(object):
     '''Расширение паука для реализации разных видов кэша'''
 
-    def __init__(self, cache_type=CACHE_NONE, cache_backend=None, cache_database=None, **kwargs):
+    def __init__(self, cache_type=CACHE_RESPONSE, cache_backend=None, cache_database=None, **kwargs):
         self._backend = None
         self._cache_type = cache_type
         if self._cache_type != CACHE_NONE and cache_backend:

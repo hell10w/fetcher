@@ -3,25 +3,11 @@
 import re
 from logging import getLogger, basicConfig, DEBUG
 
-from fetcher import MultiFetcher, Task, Structure as x, Response
+from fetcher import MultiFetcher, Task, Structure as x, Response, FileCacheBackend
 #from fetcher.frontend import FlaskFrontend, database, model
 
 
 logger = getLogger('fetcher.moviefinder')
-
-
-Task.debug_headers = True
-
-
-'''class Movie(model):
-    id = database.Column(database.Integer, primary_key=True)
-    url = database.Column(database.String(80), unique=True)
-
-    def __init__(self, url):
-        self.url = url
-
-    def __repr__(self):
-        return '<Project %r>' % self.url'''
 
 
 class MovieFinder(MultiFetcher):
@@ -147,11 +133,10 @@ class MovieFinder(MultiFetcher):
 if __name__ == '__main__':
     basicConfig(level=DEBUG)
 
-    '''frontend = FlaskFrontend(
-        MovieFinder,
-        connection_string='sqlite:///movies.db'
+    worker = MovieFinder(
+        threads_count=3,
+        cache_backend=FileCacheBackend,
+        cache_path='/tmp/cachee/'
     )
-    frontend.run()'''
-
-    worker = MovieFinder(threads_count=3)
     worker.start()
+    worker.render_stat()
