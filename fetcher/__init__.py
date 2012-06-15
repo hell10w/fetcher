@@ -7,5 +7,5 @@ from tasks import Task, TaskResult, TasksGroup, Tasks, MemoryQueue, MongoQueue
 from multifetch import MultiFetcher
 
 
-VERSION = (0, 0, 3)
+VERSION = (0, 0, 4)
 __version__ = ".".join(map(str, VERSION[0:3])) + "".join(VERSION[3:])

@@ -7,6 +7,7 @@ from zlib import compress, decompress
 from time import time
 from cPickle import dumps, loads
 from base64 import urlsafe_b64encode
+from tempfile import gettempdir
 
 from base import CacheBackend
 
@@ -18,7 +19,7 @@ class FileCacheBackend(CacheBackend):
     '''Реализация для хранения кэша в файлах в директории'''
 
     def __init__(self, cache_path=None, *args, **kwargs):
-        self._cache_path = cache_path
+        self._cache_path = cache_path or join(gettempdir(), 'fetcher-cache')
         if not exists(cache_path):
             mkdir(cache_path)
 
@@ -56,9 +57,6 @@ class FileCacheBackend(CacheBackend):
                 except:
                     # TODO: обрабатывать что-то конкетное - пока на всем валится
                     logger.error('Произошла ошибка при извлечении из кэша результата для %s' % task.request.url)
-
-                    #else:
-                    #    result = True
 
         return result, response, error, time, additional
 
