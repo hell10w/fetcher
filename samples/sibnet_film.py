@@ -135,8 +135,7 @@ if __name__ == '__main__':
 
     worker = MovieFinder(
         threads_count=3,
-        cache_backend=FileCacheBackend,
-        cache_path='/tmp/cachee/'
+        cache_backend=FileCacheBackend
     )
     worker.start()
     worker.render_stat()

@@ -20,14 +20,16 @@ class FileCacheBackend(CacheBackend):
 
     def __init__(self, cache_path=None, *args, **kwargs):
         self._cache_path = cache_path or join(gettempdir(), 'fetcher-cache')
-        if not exists(cache_path):
-            mkdir(cache_path)
+        if not exists(self._cache_path):
+            mkdir(self._cache_path)
 
     def _file_name(self, url):
-        return join(
-            self._cache_path,
-            urlsafe_b64encode(url)
-        )
+        url = urlsafe_b64encode(url)
+        path, name = url[:len(url) / 2], url[len(url) / 2:]
+        path = join(self._cache_path, path)
+        if not exists(path):
+            mkdir(path)
+        return join(path, name)
 
     def is_exists(self, task):
         '''Возвращает True только если ответ на такой url есть в кэше'''
