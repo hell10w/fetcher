@@ -37,8 +37,7 @@ class Request(object):
 
     # поведение транспорта по сохранению ответа сервера
     body_destination = AUTO_RESPONSE_BODY
-
-    temp_file_options = None
+    container_options = None
 
     def __init__(self, **kwargs):
         self.setup(**kwargs)

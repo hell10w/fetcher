@@ -63,7 +63,7 @@ class MySQLCacheBackend(CacheBackend):
                     time = data.get('time', None)
                     additional = data.get('additional', None)
 
-                    result = True
+                    result = response.body.validate()
 
                 except:
                     # TODO: обрабатывать что-то конкетное - пока на всем валится
@@ -76,7 +76,7 @@ class MySQLCacheBackend(CacheBackend):
 
         url = task.request.url
         data = {
-            'response': task.response.clone_for_cache(),
+            'response': task.response.clone(),
             'error': error,
             'additional': additional,
             'time': time()

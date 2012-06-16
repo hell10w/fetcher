@@ -3,7 +3,7 @@
 import re
 from logging import getLogger, basicConfig, DEBUG
 
-from fetcher import MultiFetcher, Task, Structure as x, Response, FileCacheBackend
+from fetcher import MultiFetcher, Task, Structure as x, Request, FILE_RESPONSE_BODY, FileCacheBackend
 #from fetcher.frontend import FlaskFrontend, database, model
 
 
@@ -29,7 +29,8 @@ class MovieFinder(MultiFetcher):
         )
 
     def task_prepare(self, task, error=None):
-        if task.response.status_code != 200:
+        if task.response.status_code != 200 or error:
+            logger.debug(u'Ошибка при выполнении инициирующей задачи!')
             yield task
             return
 
@@ -132,6 +133,8 @@ class MovieFinder(MultiFetcher):
 
 if __name__ == '__main__':
     basicConfig(level=DEBUG)
+
+    Request.body_destination = FILE_RESPONSE_BODY
 
     worker = MovieFinder(
         threads_count=3,

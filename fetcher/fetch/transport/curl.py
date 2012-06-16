@@ -8,10 +8,8 @@ from urllib import quote
 
 import pycurl
 
-from fetcher.fetch.request import MEMORY_RESPONSE_BODY, FILE_RESPONSE_BODY, AUTO_RESPONSE_BODY
 from fetcher.fetch.transport.base import BaseFetcher
 from fetcher.fetch.response import Response
-from fetcher.fetch.temporaryfile import TempFile
 
 
 class CurlFetcher(BaseFetcher):
@@ -124,7 +122,7 @@ class CurlFetcher(BaseFetcher):
 
         # коллектор тела ответа сервера
         task.response._destination = task.request.body_destination
-        task.response._temp_file_options = task.request.temp_file_options
+        task.response._container_options = task.request.container_options
         curl.setopt(pycurl.WRITEFUNCTION, task.response._writer)
 
     def process_to_task(self, task, **kwargs):
@@ -137,9 +135,6 @@ class CurlFetcher(BaseFetcher):
         curl = kwargs.get('curl', None)
 
         task.response._process_headers()
-
-        if isinstance(task.response.body, list):
-            task.response.body = ''.join(task.response.body)
 
         task.response.total_time = curl.getinfo(pycurl.TOTAL_TIME)
         task.response.url = curl.getinfo(pycurl.EFFECTIVE_URL)
@@ -156,6 +151,7 @@ class CurlFetcher(BaseFetcher):
 
 class CurlResponse(Response):
     '''Curl-специфичная часть класса ответа сервера'''
+
     header_chunks = []
 
     def __init__(self, *args, **kwargs):
@@ -164,13 +160,16 @@ class CurlResponse(Response):
 
     def _process_headers(self):
         '''Объединение заголовков ответа в словарь'''
+
         # если это уже сделано - выход
         if self.headers:
             return
-            # если частей нет - выход
+
+        # если частей нет - выход
         self.headers = {}
         if not self.header_chunks:
             return
+
         # обход пока не код ответа
         for line in self.header_chunks[::-1]:
             line = line.strip()
@@ -182,13 +181,11 @@ class CurlResponse(Response):
                     self.headers.setdefault(key, []).append(value)
                 except:
                     print line
+
         # определение и установка кодировки
         content_type = self.headers.get('Content-Type', [None])[0]
         if content_type:
-            items = dict(
-                (key.strip(), value)
-                    for key, value in parse_qsl(content_type)
-            )
+            items = dict((key.strip(), value) for key, value in parse_qsl(content_type))
             charset = items.get('charset', None)
             if charset:
                 try:
@@ -198,43 +195,13 @@ class CurlResponse(Response):
                 else:
                     self.charset = charset
 
-    def _presumably_binary_body(self):
-        '''Определение двоичен ли ответ сервера исходя из заголовков ответа'''
-        content_type = self.headers.get('Content-Type', [None])[0]
-        if content_type:
-            if content_type.startswith('text/'):
-                return False
-            # TODO: нужно определятся еще по размеру ответа
-        #content_length = int(self.headers.get('Content-Length', [None])[0] or 0)
-        #if content_length < 1024 * 1024:
-        #    return False
-        return True
-
-    def _setup_body_destination(self, destination):
-        '''Устанавливает параметры для записи тела ответа сервера'''
-        self._write_function = lambda chunk: None
-
-        if destination == FILE_RESPONSE_BODY:
-            self.body = TempFile(**(self._temp_file_options or {}))
-            self._write_function = self.body.write
-
-        elif destination == MEMORY_RESPONSE_BODY:
-            self.body = []
-            self._write_function = lambda chunk: self.body.append(chunk)
-
     def _writer(self, chunk):
         '''Обработчик фрагметов тела ответа сервера'''
+
         # если место назначения не сконфигурировано
         if not self.body:
-            destination = self._destination
-            if destination == AUTO_RESPONSE_BODY:
-                # получаем заголовки
-                self._process_headers()
-                # определяем бинарно ли содержимое
-                if self._presumably_binary_body():
-                    destination = FILE_RESPONSE_BODY
-                else:
-                    destination = MEMORY_RESPONSE_BODY
-            self._setup_body_destination(destination)
-            # запись фрагмента
-        self._write_function(chunk)
+            self._process_headers()
+            self._setup_body(self._destination, self._container_options)
+
+        # запись фрагмента
+        self.body.write(chunk)
