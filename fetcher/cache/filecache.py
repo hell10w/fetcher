@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from os import mkdir
+from os import makedirs
 from os.path import exists, join
 from logging import getLogger
 from zlib import compress, decompress
 from time import time
 from cPickle import dumps, loads
-from base64 import urlsafe_b64encode
+from urllib import quote
 from tempfile import gettempdir
 
 from base import CacheBackend
@@ -21,15 +21,20 @@ class FileCacheBackend(CacheBackend):
     def __init__(self, cache_path=None, *args, **kwargs):
         self._cache_path = cache_path or join(gettempdir(), 'fetcher-cache')
         if not exists(self._cache_path):
-            mkdir(self._cache_path)
+            makedirs(self._cache_path)
 
     def _file_name(self, url):
-        url = urlsafe_b64encode(url)
-        path, name = url[:len(url) / 2], url[len(url) / 2:]
-        path = join(self._cache_path, path)
+        url = url.rstrip('/')
+        if '://' in url:
+            url = url.split('://')[1]
+        url = quote(url)
+        full_path = url.split('/')
+
+        path = join(self._cache_path, *full_path[:-1])
         if not exists(path):
-            mkdir(path)
-        return join(path, name)
+            makedirs(path)
+
+        return join(path, full_path[-1] + '.dat')
 
     def is_exists(self, task):
         '''Возвращает True только если ответ на такой url есть в кэше'''
