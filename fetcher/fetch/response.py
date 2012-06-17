@@ -52,8 +52,12 @@ class Response(object):
     def content(self):
         '''Возвращает содержимое документа'''
         if not hasattr(self, '_body'):
-            self._body = self.body.read()
-            self._body = self._body.decode(self.charset or 'utf-8', 'ignore')
+            if self.body:
+                self._body = self.body.read()
+                self._body = self._body.decode(self.charset or 'utf-8', 'ignore')
+            else:
+                self._body = ''
+                logger.debug(u'Не построено тело ответа для %s' % self.url)
         return self._body
 
     def _rather_file_destination(self):
