@@ -180,7 +180,7 @@ class CurlResponse(Response):
                     key, value = line.split(': ', 1)
                     self.headers.setdefault(key, []).append(value)
                 except:
-                    print line
+                    pass
 
         # определение и установка кодировки
         content_type = self.headers.get('Content-Type', [None])[0]

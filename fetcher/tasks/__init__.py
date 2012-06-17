@@ -44,6 +44,7 @@ class Task(Extensions):
         self.request.url = self.response.url
         self.request.cookies.update(self.response.cookies)
         self.request.post = None
+        self.request.method = 'GET'
         self.request.is_multipart_post = False
 
 
