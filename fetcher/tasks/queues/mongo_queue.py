@@ -12,16 +12,13 @@ from fetcher.errors import FetcherException
 
 
 class MongoQueue(Queue):
-    def __init__(self, database='MongoQueue', name=None, clear_on_init=False, clear_on_del=True, maximal_size=0, **kwargs):
-        self._database_name = database
-        self._collection_name = name
-        self._clear_on_init = clear_on_init
-        self._clear_on_del = clear_on_del
-
-        Queue.__init__(self, maxsize=maximal_size)
+    def __init__(self, queue_database='FetcherQueues', queue_name=None, **kwargs):
+        self._database_name = queue_database
+        self._collection_name = queue_name
+        Queue.__init__(self)
 
     def __del__(self):
-        if self._clear_on_del:
+        if not self._collection_name:
             self.clear()
 
     def _init(self, maxsize):
@@ -30,12 +27,7 @@ class MongoQueue(Queue):
 
         if self._collection_name:
             self.collection = database[self._collection_name]
-            if self._clear_on_init:
-                self.clear()
         else:
-            self._clear_on_init = False
-            self._clear_on_del = True
-
             def create_collection():
                 for index in xrange(maxint):
                     name = 'queue_%d' % index

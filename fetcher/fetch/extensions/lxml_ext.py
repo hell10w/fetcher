@@ -4,7 +4,6 @@ from lxml.html import fromstring as html_fromstring, tostring as html_tostring
 from lxml.etree import fromstring as xml_fromstring
 
 from fetcher.errors import XPathNotFound
-from fetcher.fetch.temporaryfile import TempFile
 from base import BaseExtension
 
 
@@ -12,6 +11,9 @@ class DotDict(dict):
     def __getattr__(self, item):
         if hasattr(self, item):
             return self[item]
+
+    def __setattr__(self, key, value):
+        self[key] = value
 
 
 class Chunk(object):
@@ -137,8 +139,3 @@ class LXMLExtension(BaseExtension):
 
     def html_content(self):
         return html_tostring(self.html_tree, encoding='utf-8')
-
-    def save_html_content(self):
-        temp_file = TempFile(delete_on_finish=False)
-        temp_file.write(self.html_content())
-        return temp_file
