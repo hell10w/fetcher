@@ -49,6 +49,17 @@ class Response(object):
         return Response(**kwargs).setup(**_kwargs)
 
     @property
+    def raw_content(self):
+        '''Возвращает содержимое документа как есть'''
+        if not hasattr(self, '_raw_body'):
+            if self.body:
+                self._raw_body = self.body.read()
+            else:
+                self._raw_body = ''
+                logger.debug(u'Не построено тело ответа для %s' % self.url)
+        return self._raw_body
+
+    @property
     def content(self):
         '''Возвращает содержимое документа'''
         if not hasattr(self, '_body'):

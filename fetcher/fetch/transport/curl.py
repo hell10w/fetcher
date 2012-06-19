@@ -122,7 +122,7 @@ class CurlFetcher(BaseFetcher):
 
         # коллектор тела ответа сервера
         task.response._destination = task.request.body_destination
-        task.response._container_options = task.request.container_options
+        task.response._container_options = task.request.container_options or {}
         curl.setopt(pycurl.WRITEFUNCTION, task.response._writer)
 
     def process_to_task(self, task, **kwargs):
@@ -201,7 +201,7 @@ class CurlResponse(Response):
         # если место назначения не сконфигурировано
         if not self.body:
             self._process_headers()
-            self._setup_body(self._destination, self._container_options)
+            self._setup_body(self._destination, **self._container_options)
 
         # запись фрагмента
         self.body.write(chunk)
