@@ -1,26 +1,31 @@
-
-
 from sys import exit
-
-print 'авыривапвап'
-
-exit()
-
-
-
 import logging
 
+from lxml.html import tostring, submit_form
 from fetcher import MultiFetcher, TasksGroup, Task
-import random
+
 
 class FuckOff(MultiFetcher):
     def tasks_generator(self):
         yield Task(
-            url='https://www.hushmail.com/signup/',
+            url='http://localhost',
             handler='main'
         )
 
     def task_main(self, task, error=None):
+        task.submit()
+
+        print task.request.url
+        print task.request.method
+        print task.request.post
+
+
+        yield task.clone(
+            handler='result'
+        )
+
+        return
+
         task.make_links_absolute()
         scripts = task.xpath_list('//script[@src]/@src')
 
@@ -31,6 +36,11 @@ class FuckOff(MultiFetcher):
             urls=scripts,
             handler='main'
         )
+
+    def task_result(self, task, error=None):
+        print error, task.response.status_code
+        print '>>result>>'
+        task.html.open_in_browser()
 
     def group_main(self, group):
         task = group.task

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from lxml.html import open_in_browser
+
 from structures import Structure, Chunk, DotDict
 
 
@@ -66,3 +68,6 @@ class TreeInterface(object):
             self.tree,
             structure
         )
+
+    def open_in_browser(self):
+        open_in_browser(self.tree)

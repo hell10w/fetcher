@@ -54,7 +54,6 @@ class CurlFetcher(BaseFetcher):
         task.request.method = task.request.method.upper()
 
         # TODO: после настройки curl все задействованые параметры из task.request должны быть удалены
-        # TODO: конфигурирование task.request.post и task.request.url дожно делать в расширении ответственном за формы
 
         if task.request.post:
             if not task.request.is_multipart_post:
