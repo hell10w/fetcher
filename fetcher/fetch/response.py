@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from logging import getLogger
+from os import fdopen
+from tempfile import mkstemp
 
 from datacontainers import FileContainer, MemoryContainer
 from request import MEMORY_RESPONSE_BODY, FILE_RESPONSE_BODY, AUTO_RESPONSE_BODY
@@ -70,6 +72,19 @@ class Response(object):
                 self._body = ''
                 logger.debug(u'Не построено тело ответа для %s' % self.url)
         return self._body
+
+    def dump_content(self, filename=None):
+        '''Сохраняет ответ сервера во временный файл или в файл с указанным именем'''
+        if filename:
+            f = open(filename, 'wb')
+        else:
+            handle, filename = mkstemp()
+            f = fdopen(handle, 'wb')
+        try:
+            f.write(self.raw_content)
+        finally:
+            f.close()
+        return filename
 
     def _rather_file_destination(self):
         '''Определяет предпочтительность сохранения ответа сервера в файл'''
