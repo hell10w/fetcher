@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from logging import getLogger
-from urlparse import urljoin
 from urllib import urlencode
 
-from fetcher.errors import FormsException
 from base import BaseExtension
 
 
@@ -38,8 +36,77 @@ class FormsExtension(BaseExtension):
         return self.form.xpath('//*[@id="%s"]/@name' % id)[0]
 
     def get_control(self, name):
-        '''Находит элемент формы по имени'''
-        return self.form[name]
+        '''
+        Находит элемент формы по имени
+
+        Для работы с элементами формы lxml предоставляет прекрасный API,
+        который позволяет работать как с отдельными элементами, так и с группами,
+        объедененными общим именем, как это делается с checkbox, radio.
+        Так же есть возможность работать с множественным выбором значений в select.
+
+        Эта функция предназначена именно для получения такого интерфейса для
+        взаимодействия с нужным элементом текущей формы.
+
+        Если элемент формы логически обособлен, то через интерфейс напрямую
+        осуществляется работа с его значением. А если имени name соответствует
+        группа элементов, то интерфейс дает возможность выбрать одно или
+        несколько значений сразу для всей группы.
+
+        Интерфейсы, которые функция может вернуть, соответствуют логическому
+        смыслу элемента:
+
+        TextareaElement - взаимодействие с <textarea>.
+            Получение и установка значения через свойство value.
+
+        SelectElement - взаимодействие с <select>.
+
+            * value - если <select> может содержать только одно значение, то
+                напрямую получает и устанавливает значение через это свойство.
+                если <select> может содержать множество значений, то это свойство
+                устанавливает возвращает экземпляр класса MultipleSelectOptions
+                для работы с множеством значений.
+            * value_options - список всех возможных значений для <select>
+                содержащихся в <option> элементах.
+            * multiple - если True, то <select> позволяет выбрать несколько значений.
+
+        MultipleSelectOptions - работа с группой значений элемента <select>,
+            который позволяет выбирать несколько значений.
+
+            * options - итератор всех возможных значений
+            * add - добавить выбранное значение
+            * remove - убать значение из списка выбранных
+
+        RadioGroup - взаимодействие с группой переключателей <input type=radio>.
+            работая с группой и устанавливая значение, lxml автоматически
+            снимает выбор с другого текущего переключателя, т.к. включенным
+            должен оставаться только один переключатель.
+
+            * value - установить/получаить текущее выбранное значение группы.
+            * value_options - список всех возможных значений для этой группы.
+
+        CheckboxGroup - взаимодействие с группой флажков <input type=checkbox>.
+
+            * value - возвращает экземпляр класса CheckboxValues для работы с
+                множеством значений группы флажков.
+
+            получить список возможных значений для группы флажков можно через
+            метод задачи - checkbox_group_values.
+
+        CheckboxValues - установка/удалчение флажков в группе.
+
+            * add - добавляет значение в качестве установленного в группу
+            * remove - удаляет значение из группы
+
+        InputElement - взаимодействие с одиночным элементом ввода
+
+            * value - значение
+            * type - тип
+            * checkable - True, если элемент можно "переключить": type in ['checkbox', 'radio']
+            * checked - True, если элемент включен. для checkable элементов
+
+        '''
+
+        return self.form.inputs[name]
 
     def submit(self, submit_name=None, extra_values=None):
         '''Формирует запрос для формы'''
@@ -93,7 +160,16 @@ class FormsExtension(BaseExtension):
             for value in values:
                 post_variables.append((name, value))
 
+        for index, item in enumerate(post_variables):
+            key, value = item
+            post_variables[index] = (
+                key.encode(self.response.charset or 'utf-8'),
+                value.encode(self.response.charset or 'utf-8')
+            )
+
         if extra_values:
+            if hasattr(extra_values, 'items'):
+                extra_values = extra_values.items()
             for extra_item in extra_values:
                 post_variables.append(extra_item)
 
@@ -119,3 +195,9 @@ class FormsExtension(BaseExtension):
                 raise NotImplementedError
             else:
                 self.request.post = urlencode(post_variables)
+
+    def checkbox_group_values(self, control):
+        return [
+            item.attrib['value']
+            for item in control.value.group
+        ]

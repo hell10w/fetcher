@@ -13,6 +13,10 @@ class FuckOff(MultiFetcher):
         )
 
     def task_main(self, task, error=None):
+        print task.checkbox_group_values(task.get_control('checkbox1'))
+        print
+
+        #print task.get_control('checkbox1').value_options
         task.submit()
 
         print task.request.url
@@ -20,9 +24,7 @@ class FuckOff(MultiFetcher):
         print task.request.post
 
 
-        yield task.clone(
-            handler='result'
-        )
+        #yield task.clone(handler='result')
 
         return
 
