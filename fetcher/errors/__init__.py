@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-class FetcherException(Exception): pass
-
-class TimeoutError(FetcherException): pass
-class ConnectionError(FetcherException): pass
-class AuthError(FetcherException): pass
-class NetworkError(FetcherException): pass
+class TimeoutError(Exception): pass
+class ConnectionError(Exception): pass
+class AuthError(Exception): pass
+class NetworkError(Exception): pass
