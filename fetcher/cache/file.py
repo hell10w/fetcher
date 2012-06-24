@@ -9,13 +9,13 @@ from cPickle import dumps, loads
 from urllib import quote
 from tempfile import gettempdir
 
-from base import CacheBackend
+from base import BaseCacheBackend
 
 
-logger = getLogger('fetcher.cache.filecache')
+logger = getLogger('fetcher.cache.file')
 
 
-class FileCacheBackend(CacheBackend):
+class CacheBackend(BaseCacheBackend):
     '''Реализация для хранения кэша в файлах в директории'''
 
     def __init__(self, cache_path=None, *args, **kwargs):

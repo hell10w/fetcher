@@ -1,26 +1,39 @@
 # -*- coding: utf-8 -*-
 
-from mongocache import MongoCacheBackend
-from mysqlcache import MySQLCacheBackend
-from filecache import FileCacheBackend
+from logging import getLogger
+
+from fetcher.utils import import_module
 
 
 # три вида кэша: выключенный, простое сохранение респонса, настоящий
 CACHE_NONE, CACHE_RESPONSE, CACHE_TRUE = range(3)
 
-
 # Хранение данных осуществляется через наследники от CacheBackend,
 # логику кеша реализует CacheExtension
+
+
+logger = getLogger('fetcher.cache')
 
 
 class CacheExtension(object):
     '''Расширение паука для реализации разных видов кэша'''
 
-    def __init__(self, cache_type=CACHE_RESPONSE, cache_backend=None, cache_database=None, **kwargs):
+    def __init__(self, cache_type=CACHE_RESPONSE, cache_backend=None, **kwargs):
+        '''
+            cache_type - тип реализуемого кэша
+            cache_backend - имя модуля для импорта класса CacheBackend
+        '''
         self._backend = None
         self._cache_type = cache_type
         if self._cache_type != CACHE_NONE and cache_backend:
-            self._backend = cache_backend(cache_database=cache_database, **kwargs)
+            if isinstance(cache_backend, str):
+                try:
+                    cache_backend = import_module('fetcher.cache.%s' % cache_backend).CacheBackend
+                except ImportError:
+                    logger.error(u'Неудалось импортировать класс реализации кэша! Кэш не будет использоваться!')
+            if cache_backend:
+                logger.info(u'Использование в качестве кэша %s' % cache_backend)
+                self._backend = cache_backend(**kwargs)
 
     @property
     def is_process_tasks(self):
@@ -30,7 +43,6 @@ class CacheExtension(object):
     def process_task(self, task):
         '''Обрабатывает пользовательский таск и по-возможности возвращает таск со старым респонсом'''
         result, error = False, None
-
 
         if not task.no_cache_restore:
             # обычное сохранение респонса

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-
-class CacheBackend(object):
+class BaseCacheBackend(object):
     def is_exists(self, task):
         '''Возвращает True только если ответ на такой url есть в кэше'''
         return False

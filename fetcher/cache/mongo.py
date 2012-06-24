@@ -8,13 +8,13 @@ from cPickle import dumps, loads
 from pymongo import Connection
 from pymongo.binary import Binary
 
-from base import CacheBackend
+from base import BaseCacheBackend
 
 
-logger = getLogger('fetcher.cache.mongocache')
+logger = getLogger('fetcher.cache.mongo')
 
 
-class MongoCacheBackend(CacheBackend):
+class CacheBackend(BaseCacheBackend):
     '''Реализация для хранения кэша в mongo'''
 
     def __init__(self, cache_database=None, *args, **kwargs):
