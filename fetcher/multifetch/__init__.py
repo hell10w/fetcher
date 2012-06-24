@@ -6,6 +6,7 @@ from logging import getLogger
 from fetcher.cache import CacheExtension
 from fetcher.tasks import Task, TaskResult, TasksGroup, Tasks
 from fetcher.multifetch.dispatcher import Dispatcher
+from fetcher.multifetch.errors import TimeoutError, ConnectionError, AuthError, NetworkError
 
 
 logger = getLogger('fetcher.multifetcher')

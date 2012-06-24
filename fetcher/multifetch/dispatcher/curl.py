@@ -3,8 +3,8 @@
 import pycurl
 
 from fetcher.fetch import Fetcher
+from fetcher.multifetch import TimeoutError, ConnectionError, AuthError, NetworkError
 from fetcher.multifetch.dispatcher.base import BaseDispatcher
-from fetcher.errors import TimeoutError, ConnectionError, AuthError, NetworkError
 
 
 class CurlDispatcher(BaseDispatcher):
