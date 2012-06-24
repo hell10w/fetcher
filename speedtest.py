@@ -49,5 +49,21 @@ def worker_fetcher():
     fetcher.start()
 
 
-timeit(worker_spider)
+def queue_tester(tasks_count=100, **kwargs):
+    class Fetcher(MultiFetcher):
+        def on_start(self):
+            for _ in xrange(tasks_count):
+                yield FetcherTask(url='http://localhost')
+    spider = Fetcher(**kwargs)
+    spider.start()
+
+
+print '*** Сравнение скорости фреймворков ***'
 timeit(worker_fetcher)
+timeit(worker_spider)
+
+print '*** Сравнение скорости очередей задач ***'
+timeit(queue_tester, queue='memory')
+timeit(queue_tester, queue='memory', queue_compress=True)
+timeit(queue_tester, queue='mongo')
+timeit(queue_tester, queue='sqla')

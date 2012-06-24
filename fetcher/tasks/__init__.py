@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from fetcher.tasks.queues import MemoryQueue, MongoQueue
+from logging import getLogger
+
 from fetcher.fetch import Extensions, Response, Request
+from fetcher.utils import import_module
+
+
+logger = getLogger('fetcher.tasks')
 
 
 class Task(Extensions):
@@ -92,7 +97,7 @@ class TasksGroup(object):
 class Tasks(object):
     '''Менеджер задач'''
 
-    def __init__(self, queue=MemoryQueue, threads_count=20, **kwargs):
+    def __init__(self, queue='memory', threads_count=20, **kwargs):
         '''
         Конструктор менеджера задач.
         Параметры:
@@ -100,8 +105,19 @@ class Tasks(object):
                 Может принимать следующие значения: memory, mongo
         '''
 
-        self._queue = queue(**kwargs)
+        #self._queue = queue(**kwargs)
+
+        if isinstance(queue, str):
+            try:
+                queue = import_module('fetcher.tasks.queues.%s' % queue).Queue
+            except ImportError:
+                raise Exception(u'Неудалось импортировать класс реализации очереди задач! Проверьте аргументы!')
+        if queue:
+            logger.info(u'Использование в качестве очереди задач %s' % queue)
+            self._queue = queue(**kwargs)
+
         self._queue_size = threads_count * 2
+
 
     def add_task(self, task=None, **kwargs):
         '''
@@ -137,7 +153,7 @@ class Tasks(object):
 
     def size(self):
         '''Размер очереди задач'''
-        return self._queue.qsize()
+        return self._queue.size()
 
     def get_task(self):
         '''Извлекает задачу'''
@@ -145,8 +161,8 @@ class Tasks(object):
 
     def empty(self):
         '''Проверяет пустоту очереди'''
-        return self._queue.empty()
+        return not self._queue.size()
 
     def full(self):
         '''Проверяет превышение *рекомендуемого* размера очереди'''
-        return self._queue.qsize() == self._queue_size
+        return self._queue.size() == self._queue_size

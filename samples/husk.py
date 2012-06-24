@@ -1,18 +1,25 @@
+# -*- coding: utf-8 -*-
+
 from sys import exit
 import logging
 
-from lxml.html import tostring, submit_form
+#from lxml.html import tostring, submit_form
 from fetcher import MultiFetcher, TasksGroup, Task
 
 
 class FuckOff(MultiFetcher):
-    def tasks_generator(self):
-        yield Task(
-            url='http://localhost',
-            handler='main'
-        )
+    def on_start(self):
+        for _ in xrange(1000):
+            yield Task(
+                url='http://localhost',
+                handler='main'
+            )
+        print u'Генерация задач закончена: %d!' % self.tasks.size()
 
-    def task_main(self, task, error=None):
+    #def tasks_generator(self):
+    #    return
+
+    '''def task_main(self, task, error=None):
         print task.checkbox_group_values(task.get_control('checkbox1'))
         print
 
@@ -68,10 +75,13 @@ class FuckOff(MultiFetcher):
         #for form in task.forms:
         #    print dict(form.fields)
 
-        #print group.task.save_html_content().name
+        #print group.task.save_html_content().name'''
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    fo = FuckOff()
+    fo = FuckOff(
+        threads_count=60
+    )
     fo.start()
+    fo.render_stat()
