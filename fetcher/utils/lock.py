@@ -7,6 +7,7 @@ fh = None
 
 
 def is_single_instance(lockname):
+    '''Проверка наличия запущенных копий скрипта'''
     global fh
     fh = open(lockname, 'w')
     try:

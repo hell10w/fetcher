@@ -104,6 +104,7 @@ def _uri_split(uri):
 
 
 def url_fix(s, charset='utf-8'):
+    s = s.rstrip('/')
     if isinstance(s, unicode):
         s = s.encode(charset, 'replace')
     scheme, netloc, path, qs, anchor = _safe_urlsplit(s)

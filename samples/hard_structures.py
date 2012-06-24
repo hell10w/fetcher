@@ -14,19 +14,19 @@ class LogsScanner(MultiFetcher):
         )
 
     def task_lookup(self, task, error=None):
-        if task.response.status_code != 200:
+        if error or task.response.status_code != 200:
             yield task
             return
 
-        task.make_links_absolute()
+        task.html.make_links_absolute()
 
-        if task.xpath_exists('//div[@class="roomtitle"]'):
-            name = task.xpath('//div[@class="roomtitle"]/text()')
-            date = task.xpath('//div[@class="logdate"]/text()')
-            jid = task.xpath('//a[@class="roomjid"]/text()')
+        if task.html.xpath_exists('//div[@class="roomtitle"]'):
+            name = task.html.xpath('//div[@class="roomtitle"]/text()')
+            date = task.html.xpath('//div[@class="logdate"]/text()')
+            jid = task.html.xpath('//a[@class="roomjid"]/text()')
             print '%s (%s), %s' % (name, jid, date)
 
-            items = task.structured_xpath(
+            items = task.html.structured_xpath(
                 '//a[@class="ts"]',
                 x(
                     './following-sibling::font',
@@ -44,7 +44,7 @@ class LogsScanner(MultiFetcher):
                     '' if item.class_ != 'mn' else ': ' + item.text
                 )
         else:
-            for link in task.xpath_list('//a/@href'):
+            for link in task.html.xpath('//a/@href', all=True):
                 link = str(link)
                 if link.startswith(LogsScanner.START_URL):
                     yield Task(
