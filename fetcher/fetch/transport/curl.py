@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from logging import getLogger
 from urlparse import urljoin
 from StringIO import StringIO
-from Cookie import SimpleCookie
+from Cookie import SimpleCookie, CookieError
 from urlparse import parse_qsl
 from urllib import quote
 
@@ -10,6 +11,9 @@ import pycurl
 
 from fetcher.fetch.transport.base import BaseFetcher
 from fetcher.fetch.response import Response
+
+
+logger = getLogger('fetcher.curl')
 
 
 class CurlFetcher(BaseFetcher):
@@ -57,9 +61,9 @@ class CurlFetcher(BaseFetcher):
 
         if task.request.post:
             if not task.request.is_multipart_post:
-                curl.setopt(pycurl.POSTFIELDS, task.request.post or '')
+                curl.setopt(pycurl.POSTFIELDS, task.request.post)
             else:
-                curl.setopt(pycurl.HTTPPOST, task.request.post or '')
+                curl.setopt(pycurl.HTTPPOST, task.request.post)
 
         if task.request.method == 'GET':
             curl.setopt(pycurl.HTTPGET, 1)
@@ -96,19 +100,22 @@ class CurlFetcher(BaseFetcher):
             ]
         )
 
-        curl.setopt(pycurl.COOKIEFILE, '')
-
+        # куки
         if task.request.cookies:
-            cookies = SimpleCookie(task.request.cookies)
-            curl.setopt(pycurl.COOKIELIST, 'ALL')
-            curl.setopt(
-                pycurl.COOKIELIST,
-                'Set-Cookie: %s' % cookies.output(header='', sep=';')
-            )
+            try:
+                cookies = SimpleCookie(task.request.cookies)
+                curl.setopt(pycurl.COOKIELIST, 'ALL')
+                curl.setopt(
+                    pycurl.COOKIELIST,
+                    'Set-Cookie: %s' % cookies.output(header='', sep=';')
+                )
+            except CookieError:
+                logger.error(u'Ошибка при разборе кук парсером!')
 
-        if not task.request.proxy:
-            curl.setopt(pycurl.PROXY, '')
-        else:
+        # прокси
+        curl.setopt(pycurl.PROXY, '')
+
+        if task.request.proxy:
             curl.setopt(pycurl.PROXY, task.request.proxy)
             proxy_type = task.request.proxy_type or 'HTTP'
             proxy_type = getattr(pycurl, 'PROXYTYPE_%s' % proxy_type.upper())
@@ -150,8 +157,6 @@ class CurlFetcher(BaseFetcher):
 
 class CurlResponse(Response):
     '''Curl-специфичная часть класса ответа сервера'''
-
-    header_chunks = []
 
     def __init__(self, *args, **kwargs):
         self.header_chunks = []

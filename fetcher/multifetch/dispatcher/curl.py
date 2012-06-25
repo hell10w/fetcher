@@ -60,7 +60,7 @@ class CurlDispatcher(BaseDispatcher):
             queue_size, success_list, failed_list = self.multi_handle.info_read()
             # обработка выполненных Curl объектов
             for curl in success_list:
-                yield  self.process_finished_curl(curl), None
+                yield self.process_finished_curl(curl), None
             # обработка сбойнувших Curl объектов
             for curl, error_code, error_message in failed_list:
                 error = None
@@ -76,7 +76,7 @@ class CurlDispatcher(BaseDispatcher):
                     error = NetworkError(error_code, error_message)
                 yield self.process_failed_curl(curl), error
             #
-            if queue_size == 0:
+            if not queue_size:
                 break
         self.multi_handle.select(0.1)
 

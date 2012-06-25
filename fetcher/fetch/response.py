@@ -14,21 +14,21 @@ logger = getLogger('fetcher.fetch.response')
 class Response(object):
     '''Ответ сервера'''
 
-    status_code = None
-    url = None
-    headers = {}
-    cookies = {}
-
-    body = None
-
-    encoding = None
-    charset = None
-
-    total_time = None
-
-    is_from_cache = None
-
     def __init__(self, **kwargs):
+        self.status_code = None
+        self.url = None
+        self.headers = {}
+        self.cookies = {}
+
+        self.body = None
+
+        self.encoding = None
+        self.charset = None
+
+        self.total_time = None
+
+        self.is_from_cache = None
+
         self.setup(**kwargs)
 
     def setup(self, **kwargs):
