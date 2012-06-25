@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from sys import exc_info
+from traceback import extract_tb
 from time import time
 from logging import getLogger
 
@@ -25,11 +27,6 @@ class MultiFetcher(object):
     transfer_time = 0
 
     def __init__(self, **kwargs):
-        '''
-        Конструктор менеджера асинхроной работы.
-        Параметры:
-            queue_transport - Контейнер задач
-        '''
         self.dispatcher = Dispatcher(**kwargs)
         self.tasks = Tasks(**kwargs)
         self.cache_extension = CacheExtension(**kwargs)
@@ -193,7 +190,10 @@ class MultiFetcher(object):
             handler = getattr(self, 'task_%s' % handler, None)
 
         if callable(handler):
-            self._process_for_tasks(handler(*args))
+            try:
+                self._process_for_tasks(handler(*args))
+            except Exception, e:
+                self._traceback_logger()
 
     def _process_for_tasks(self, generator, limit=None):
         '''Извлекает и добавляет в очередь задания из функции'''
@@ -214,3 +214,12 @@ class MultiFetcher(object):
             if limit:
                 if self.tasks.full():
                     return
+
+    def _traceback_logger(self):
+        exc_type, exc_value, exc_traceback = exc_info()
+        traceback = [
+            '  File "%s", line %d, in %s\n    %s' % line
+            for line in extract_tb(exc_traceback)
+        ]
+        logger.error(u'Подавление ошибки в обработчике задачи!')
+        logger.error('Traceback:\n' + '\n'.join(traceback))
