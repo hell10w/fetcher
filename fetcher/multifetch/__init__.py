@@ -223,3 +223,4 @@ class MultiFetcher(object):
         ]
         logger.error(u'Подавление ошибки в обработчике задачи!')
         logger.error('Traceback:\n' + '\n'.join(traceback))
+        logger.error(u'%s: %s' % (exc_type.__name__, exc_value))
