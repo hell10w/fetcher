@@ -12,12 +12,13 @@ logger = getLogger('fetcher.tasks')
 class Task(Extensions):
     '''Отдельная задача'''
 
-    no_cache_store = False
-    no_cache_restore = False
-
     def __init__(self, **kwarg):
+        self.no_cache_store = False
+        self.no_cache_restore = False
+
         self.response = Response()
         self.request = Request()
+
         self.setup(**kwarg)
 
     def setup(self, **kwarg):
@@ -40,7 +41,7 @@ class Task(Extensions):
         _kwargs = dict(
             (key, value)
             for key, value in self.__dict__.iteritems()
-            if not key.startswith('_')
+            if not key[0] == '_'
         )
         return Task(**_kwargs).setup(**kwargs)
 

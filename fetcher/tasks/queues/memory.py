@@ -25,11 +25,12 @@ class Queue(BaseQueue):
         priority, data = self._queue.get()
         if self._compress:
             data = decompress(data)
-        return priority, loads(data)
+            data = loads(data)
+        return priority, data
 
     def put(self, item):
         priority, data = item[:2]
-        data = dumps(data)
         if self._compress:
+            data = dumps(data)
             data = compress(data)
         self._queue.put((priority, data))

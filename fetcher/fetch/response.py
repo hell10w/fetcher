@@ -46,7 +46,7 @@ class Response(object):
         _kwargs = dict(
             (key, value)
             for key, value in self.__dict__.iteritems()
-            if not key.startswith('_')
+            if not key[0] == '_'
         )
         return Response(**kwargs).setup(**_kwargs)
 
