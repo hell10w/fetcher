@@ -27,20 +27,22 @@ class CurlFetcher(BaseFetcher):
 
         curl = kwargs.get('curl', None)
 
+        # основные настройки
         curl.setopt(pycurl.USERAGENT, task.request.user_agent or '')
 
+        # HTTPS в топку
         curl.setopt(pycurl.SSL_VERIFYPEER, 0)
         curl.setopt(pycurl.SSL_VERIFYHOST, 0)
 
-        curl.setopt(pycurl.VERBOSE, 0)
-        curl.setopt(pycurl.DEBUGFUNCTION, lambda _type, text: None)
-
+        # редиректы
         curl.setopt(pycurl.FOLLOWLOCATION, int(task.request.allow_redirects))
         curl.setopt(pycurl.MAXREDIRS, task.request.max_redirects)
 
+        # задержки
         curl.setopt(pycurl.CONNECTTIMEOUT, task.request.connection_timeout or 0)
         curl.setopt(pycurl.TIMEOUT, task.request.overall_timeout or 0)
 
+        # URL
         # TODO: тут все через задницу
         url = task.request.url
         if url:
@@ -55,16 +57,19 @@ class CurlFetcher(BaseFetcher):
                 url = str(quote(url, safe=':/&?.:='))
         curl.setopt(pycurl.URL, url)
 
+        # имя метода
         task.request.method = task.request.method.upper()
 
         # TODO: после настройки curl все задействованые параметры из task.request должны быть удалены
 
+        # POST
         if task.request.post:
             if not task.request.is_multipart_post:
                 curl.setopt(pycurl.POSTFIELDS, task.request.post)
             else:
                 curl.setopt(pycurl.HTTPPOST, task.request.post)
 
+        # метод
         if task.request.method == 'GET':
             curl.setopt(pycurl.HTTPGET, 1)
         elif task.request.method == 'POST':
@@ -90,8 +95,10 @@ class CurlFetcher(BaseFetcher):
         if 'zlib' in pycurl.version:
             curl.setopt(pycurl.ENCODING, 'gzip')
 
+        # реферер
         curl.setopt(pycurl.REFERER, task.request.referer or '')
 
+        # дополнительные заголовки
         curl.setopt(
             pycurl.HTTPHEADER,
             [
@@ -111,6 +118,8 @@ class CurlFetcher(BaseFetcher):
                 )
             except CookieError:
                 logger.error(u'Ошибка при разборе кук парсером!')
+        else:
+            curl.setopt(pycurl.COOKIEFILE, '')
 
         # прокси
         curl.setopt(pycurl.PROXY, '')
@@ -123,13 +132,20 @@ class CurlFetcher(BaseFetcher):
             curl.setopt(pycurl.PROXYUSERPWD, task.request.proxy_auth or '')
 
         # сборщик заголовков
-        task.response = CurlResponse()
+        task.response = CurlResponse(debug=task.debug)
         curl.setopt(pycurl.HEADERFUNCTION, task.response.header_chunks.append)
 
         # коллектор тела ответа сервера
         task.response._destination = task.request.body_destination
         task.response._container_options = task.request.container_options or {}
         curl.setopt(pycurl.WRITEFUNCTION, task.response._writer)
+
+        # отладка
+        curl.setopt(pycurl.VERBOSE, 1 if task.debug else 0)
+        curl.setopt(
+            pycurl.DEBUGFUNCTION,
+            task.response._debug_logger if task.debug else lambda _type, text: None
+        )
 
     def process_to_task(self, task, **kwargs):
         '''Возвращает результат выполнения запроса в задачу'''
@@ -158,8 +174,13 @@ class CurlFetcher(BaseFetcher):
 class CurlResponse(Response):
     '''Curl-специфичная часть класса ответа сервера'''
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, debug=False, *args, **kwargs):
         self.header_chunks = []
+        if debug:
+            self._collected_headers_in = []
+            self._collected_headers_out = []
+            self._collected_data_out = []
+        self.debug = debug
         super(CurlResponse, self).__init__(*args, **kwargs)
 
     def _process_headers(self):
@@ -168,6 +189,12 @@ class CurlResponse(Response):
         # если это уже сделано - выход
         if self.headers:
             return
+
+        if self.debug:
+            logger.debug(u'Исходящие заголовки:\n' + '\n'.join(self._collected_headers_out))
+            if self._collected_data_out:
+                logger.debug(u'Исходящие данные:\n' + '\n'.join(self._collected_data_out))
+            logger.debug(u'Входящие заголовки:\n' + '\n'.join(self._collected_headers_in))
 
         # если частей нет - выход
         self.headers = {}
@@ -209,3 +236,18 @@ class CurlResponse(Response):
 
         # запись фрагмента
         self.body.write(chunk)
+
+    def _debug_logger(self, type, text):
+        '''Обрабатывает отладочные сообщения от curl'''
+
+        if type == pycurl.INFOTYPE_TEXT:
+            logger.debug(text.rstrip())
+
+        elif type == pycurl.INFOTYPE_HEADER_IN:
+            self._collected_headers_in.append(text.rstrip())
+
+        elif type == pycurl.INFOTYPE_HEADER_OUT:
+            self._collected_headers_out.append(text.rstrip())
+
+        elif type == pycurl.INFOTYPE_DATA_OUT:
+            self._collected_data_out.append(text.rstrip())

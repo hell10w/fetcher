@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from random import choice
+from random import choice, seed
 
 
 USER_AGENTS = '''
@@ -26,6 +26,9 @@ USER_AGENTS = '''
     Mozilla/5.0 (compatible; YandexNews/3.0)
     Mozilla/5.0 (compatible; YandexImageResizer/2.0)
 '''.strip().splitlines()
+
+
+seed()
 
 
 def get_user_agent():

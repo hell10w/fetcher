@@ -12,6 +12,8 @@ logger = getLogger('fetcher.tasks')
 class Task(Extensions):
     '''Отдельная задача'''
 
+    debug = False
+
     def __init__(self, **kwarg):
         self.no_cache_store = False
         self.no_cache_restore = False
