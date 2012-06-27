@@ -9,6 +9,13 @@ from base import BaseExtension
 logger = getLogger('fetcher.formsext')
 
 
+class PostFile(object):
+    def __init__(self, filename=None, file_content=None, content_type=None):
+        self._filename = filename
+        self._file_content = file_content
+        self._content_type = content_type
+
+
 class FormsExtension(BaseExtension):
     def select_form(self, index=None, xpath=None, id=None, name=None):
         '''Устанавливает нужную форму текущей'''
@@ -108,8 +115,14 @@ class FormsExtension(BaseExtension):
 
         return self.form.inputs[name]
 
-    def submit(self, submit_name=None, extra_values=None):
+    def submit(self, submit_name=None, extra_values=None, files=None):
         '''Формирует запрос для формы'''
+
+        #
+        #    files = [
+        #        ('input_name', PostFile(filename='img.jpg'))
+        #    ]
+        #
 
         def control_filter(control):
             '''Фильтр элементов формы, которые не будут принимать участие в запросе'''
@@ -160,12 +173,19 @@ class FormsExtension(BaseExtension):
             for value in values:
                 post_variables.append((name, value))
 
-        for index, item in enumerate(post_variables):
-            key, value = item
-            post_variables[index] = (
+        post_variables = [
+            (
                 key.encode(self.response.charset or 'utf-8'),
-                value.encode(self.response.charset or 'utf-8')
+                value.encode(self.response.charset or 'utf-8') if value else ''
             )
+            for key, value in post_variables
+        ]
+        #for index, item in enumerate(post_variables):
+        #    key, value = item
+        #    post_variables[index] = (
+        #        key.encode(self.response.charset or 'utf-8'),
+        #        value.encode(self.response.charset or 'utf-8')
+        #    )
 
         if extra_values:
             if hasattr(extra_values, 'items'):
@@ -182,17 +202,20 @@ class FormsExtension(BaseExtension):
 
         self.request.post = None
 
-        self.request.is_multipart_post = False # TODO: 'multipart' in enctype
+        self.request.is_multipart_post = 'multipart' in self.form.get('enctype', '')
 
         if self.form.method == 'GET':
             self.request.method = 'GET'
-            self.request.url = self.request.url + '?' + urlencode(post_variables)
+            self.request.post = post_variables
+            #self.request.url = self.request.url + '?' + urlencode(post_variables)
 
         elif self.form.method == 'POST':
             self.request.method = 'POST'
 
             if self.request.is_multipart_post:
-                raise NotImplementedError
+                keys = [key for key, _ in files]
+                post_variables = filter(lambda item: item[0] not in keys, post_variables)
+                self.request.post = post_variables + files
             else:
                 self.request.post = urlencode(post_variables)
 

@@ -5,10 +5,11 @@ from urlparse import urljoin
 from StringIO import StringIO
 from Cookie import SimpleCookie, CookieError
 from urlparse import parse_qsl
-from urllib import quote
+from urllib import quote, urlencode
 
 import pycurl
 
+from fetcher.fetch.extensions.forms_ext import PostFile
 from fetcher.fetch.transport.base import BaseFetcher
 from fetcher.fetch.response import Response
 
@@ -42,39 +43,30 @@ class CurlFetcher(BaseFetcher):
         curl.setopt(pycurl.CONNECTTIMEOUT, task.request.connection_timeout or 0)
         curl.setopt(pycurl.TIMEOUT, task.request.overall_timeout or 0)
 
-        # URL
-        # TODO: тут все через задницу
-        url = task.request.url
-        if url:
-            if not url[:7].lower().startswith('http://'):
-                url = urljoin(task.response.url, url)
-        if not isinstance(url, (str, unicode)):
-            raise TypeError(u'Неправильный тип URL: %s' % type(url))
-        if isinstance(url, unicode):
-            try:
-                url = str(url.decode('utf-8'))
-            except UnicodeEncodeError:
-                url = str(quote(url, safe=':/&?.:='))
-        curl.setopt(pycurl.URL, url)
-
         # имя метода
         task.request.method = task.request.method.upper()
 
         # TODO: после настройки curl все задействованые параметры из task.request должны быть удалены
 
-        # POST
-        if task.request.post:
-            if not task.request.is_multipart_post:
-                curl.setopt(pycurl.POSTFIELDS, task.request.post)
-            else:
-                curl.setopt(pycurl.HTTPPOST, task.request.post)
-
         # метод
         if task.request.method == 'GET':
             curl.setopt(pycurl.HTTPGET, 1)
+            if task.request.post:
+                task.request.url = task.request.url + '?' + urlencode(task.request.post)
         elif task.request.method == 'POST':
             curl.setopt(pycurl.POST, 1)
-            # TODO: проверить POST
+            # POST
+            if task.request.post:
+                if task.request.is_multipart_post:
+                    _post = [
+                        (key, self._process_for_post_file(value))
+                        for key, value in task.request.post
+                    ]
+                    curl.setopt(pycurl.HTTPPOST, _post)
+                else:
+                    curl.setopt(pycurl.POSTFIELDS, task.request.post)
+            else:
+                curl.setopt(pycurl.POSTFIELDS, '')
         elif task.request.method == 'PUT':
             curl.setopt(pycurl.PUT, 1)
             if task.request.post:
@@ -91,6 +83,21 @@ class CurlFetcher(BaseFetcher):
             curl.setopt(pycurl.NOBODY, 1)
         elif task.request.method == 'UPLOAD':
             curl.setopt(pycurl.UPLOAD, 1)
+
+        # URL
+        # TODO: тут все через задницу
+        url = task.request.url
+        if url:
+            if not url[:7].lower().startswith('http://'):
+                url = urljoin(task.response.url, url)
+        if not isinstance(url, (str, unicode)):
+            raise TypeError(u'Неправильный тип URL: %s' % type(url))
+        if isinstance(url, unicode):
+            try:
+                url = str(url.decode('utf-8'))
+            except UnicodeEncodeError:
+                url = str(quote(url, safe=':/&?.:='))
+        curl.setopt(pycurl.URL, url)
 
         if 'zlib' in pycurl.version:
             curl.setopt(pycurl.ENCODING, 'gzip')
@@ -169,6 +176,21 @@ class CurlFetcher(BaseFetcher):
         task.response.cookies = cookies
 
         task.process_response()
+
+    def _process_for_post_file(self, value):
+        if isinstance(value, PostFile):
+            if value._content_type:
+                content_type = (pycurl.FORM_CONTENTTYPE, value._content_type)
+            else:
+                content_type = ()
+            if value._file_content:
+                contents = (pycurl.FORM_CONTENTS, value._file_content)
+            elif value._filename:
+                contents = (pycurl.FORM_FILE, value._filename)
+            return content_type + contents
+
+        else:
+            return value
 
 
 class CurlResponse(Response):
