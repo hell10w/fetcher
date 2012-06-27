@@ -72,7 +72,6 @@ class Antigate(object):
 
             if content != 'CAPCHA_NOT_READY':
                 content = content.split('|')
-                logger.info('capres: %s' % content)
                 if len(content) == 2:
                     result = content[1]
                 else:
