@@ -8,109 +8,34 @@ from fetcher import MultiFetcher, Task, PostFile
 logger = getLogger('filepost')
 
 
-class AntigateTask(object):
-    def __init__(self, key=None, filename=None,
-                       phrase=False, regsense=False, numeric=False,
-                       min_len=0, max_len=30):
-
-        if not key:
-            raise Exception(u'Ключ для Antigate должен быть указан!')
-
-        if not filename:
-            raise Exception(u'Не указан файл капчи!!')
-
-        self.captcha_id = None
-
-        self.key = key
-        self.filename = filename
-        self.phrase = '1' if phrase else '0'
-        self.regsense = '1' if regsense else '0'
-        self.numeric = '1' if numeric else '0'
-        self.min_len = str(min_len)
-        self.max_len = str(max_len)
-
-    def send(self, **kwargs):
-        post = [
-            ('method', 'post'),
-            ('phrase', self.phrase),
-            ('regsense', self.regsense),
-            ('numeric', self.numeric),
-            ('min_len', self.min_len),
-            ('max_len', self.max_len),
-            ('key', self.key),
-            ('file', PostFile(filename=self.filename))
-        ]
-
-        return Task(
-            url='http://antigate.com/in.php',
-            method='POST',
-            is_multipart_post=True,
-            post=post,
-            **kwargs
-        )
-
-    def send_handler(self, task, error=None):
-        if error or task.response.status_code != 200:
-            return False
-        try:
-            self.captcha_id = int(task.response.content.split('|')[1])
-            return True
-        except:
-            return False
-
-    def state(self, **kwargs):
-        if not self.captcha_id:
-            raise Exception(u'Нет id капчи - обработчик задачи отправки не вызывался или отработал с ошибкой!')
-        return Task(
-            url='http://antigate.com/res.php',
-            post=[
-                ('key', self.key),
-                ('action', 'get'),
-                ('id', self.captcha_id)
-            ],
-            **kwargs
-        )
-
-    def state_handler(self, task, error=None):
-        result, error_message = False, None
-
-        if not error and task.response.status_code == 200:
-            content = task.response.content
-
-            if content != 'CAPCHA_NOT_READY':
-                content = content.split('|')
-                logger.info('capres: %s' % content)
-                if len(content) == 2:
-                    result = content[1]
-                else:
-                    error_message = content[0]
-
-        return (result, error_message)
-
-
 class FilePoster(MultiFetcher):
     def on_start(self):
         logger.debug(u'Добавление инициирующей задачи')
-        self.a = AntigateTask(
-            key='***********************',
+        yield Antigate.send(
+            handler='result',
+            key='???????????????',
             filename='/tmp/0.jpg',
-            phrase=True,
+            phrase=True
         )
-        yield self.a.send(handler='result')
 
     def task_result(self, task, error=None):
-        if not self.a.send_handler(task, error):
+        state_task = Antigate.send_handler(task, error, handler='answer')
+        if not state_task:
+            # капча отправлена с ошибкой - нужно повторить
             yield task
-
-        yield self.a.state(handler='answer')
+        else:
+            # капча успешно отправлена - можно запрашивать её статус
+            yield state_task
 
     def task_answer(self, task, error=None):
-        result, error_message = self.a.state_handler(task, error)
+        result, error_message = Antigate.state_handler(task, error)
 
         if result or error_message:
+            # если установно значение в result или error_message - то либо капча разгадана, либо произошла ошибка
             print result, error_message
             return
 
+        # капча еще не разгадана - повтор запроса статуса
         yield task
 
     def task_main(self, task, error=None):
