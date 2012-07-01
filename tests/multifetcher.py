@@ -58,7 +58,15 @@ class Test(TestCase):
                 )
                 yield Task(
                     handler=(__name__, 'Test', 'task_static'),
+                    url=ServerOptions.SERVER_URL
+                )
+                yield Task(
+                    handler=Test.task_static,
                     spider=self,
+                    url=ServerOptions.SERVER_URL
+                )
+                yield Task(
+                    handler=self.task_named,
                     url=ServerOptions.SERVER_URL
                 )
                 yield DataItem(
@@ -76,8 +84,13 @@ class Test(TestCase):
             def data_item(self, **kwargs):
                 self.handlers['dataitem'] = True
 
+            def tasks_collector(self, task, error=None):
+                raise Exception()
+
         spider = Spider(threads_count=1)
         spider.start()
+
+        print spider.handlers
 
         self.assertTrue(all(spider.handlers.values()))
 

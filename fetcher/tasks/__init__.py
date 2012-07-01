@@ -9,7 +9,33 @@ from fetcher.utils import import_module
 logger = getLogger('fetcher.tasks')
 
 
-class Task(Extensions):
+class HandledObject(object):
+    '''Объект который может иметь обработчик'''
+
+    __handlers = {}
+
+    def __handler_set(self, name):
+        if isinstance(name, str):
+            self.handler_hashed = False
+            self.handler_reference = name
+
+        else:
+            h = hash(str(name))
+            HandledObject.__handlers[h] = name
+
+            self.handler_hashed = True
+            self.handler_reference = h
+
+    def __handler_get(self):
+        if self.handler_hashed:
+            return HandledObject.__handlers[self.handler_reference]
+        else:
+            return self.handler_reference
+
+    handler = property(__handler_get, __handler_set)
+
+
+class Task(HandledObject, Extensions):
     '''Отдельная задача'''
 
     debug = False
@@ -56,7 +82,7 @@ class Task(Extensions):
         self.request.is_multipart_post = False
 
 
-class ProcessItem(object):
+class ProcessItem(HandledObject):
     def __init__(self, handler, **kwargs):
         self.handler = handler
         self.kwargs = kwargs
@@ -66,7 +92,7 @@ class DataItem(ProcessItem):
     '''Элемент данных для отсылки обработчику'''
 
 
-class TasksGroup(object):
+class TasksGroup(HandledObject):
     '''Группа задач'''
 
     groups = {}
@@ -81,7 +107,6 @@ class TasksGroup(object):
     def __init__(self, base_task, load_urls, spider=None, **kwarg):
         TasksGroup.groups[id(self)] = self
 
-        self.spider = spider
         self.task = base_task
         self.load_urls = load_urls
 
@@ -105,7 +130,7 @@ class TasksGroup(object):
                 request=self.task.clone(
                     url=str(url)
                 ),
-                handler=(__name__, 'TasksGroup', '_task_item'),
+                handler=self._task_item,
                 priority=1,
                 internal_data=TasksGroup.DotDict(
                     group=id(self),
@@ -127,12 +152,8 @@ class TasksGroup(object):
         group.__count -= 1
 
         if not group.__count:
-            default_handler = group.spider.groups_collector
-            if not default_handler:
-                default_handler = (__name__, 'TasksGroup', 'groups_collector')
-
             yield ProcessItem(
-                handler=getattr(group, 'handler', default_handler),
+                handler=group.handler,
                 group=group
             )
 

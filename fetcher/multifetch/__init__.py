@@ -159,14 +159,6 @@ class MultiFetcher(SpiderBase):
         if isinstance(handler, str):
             handler = getattr(self, '%s_%s' % (prefix, handler), None)
 
-        elif isinstance(handler, (tuple, list)):
-            module, cls, attr = handler
-            if module:
-                module = getattr(modules[module], cls, None)
-            else:
-                module = globals()[cls]
-            handler = getattr(module, attr, None)
-
         if callable(handler):
             try:
                 self._process_for_items(handler(**process_item.kwargs))

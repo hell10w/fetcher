@@ -2,7 +2,7 @@
 
 from logging import getLogger
 
-from fetcher.tasks import Task, DataItem
+from fetcher.tasks import Task, ProcessItem
 from fetcher.fetch.extensions import PostFile
 
 
@@ -18,7 +18,7 @@ class Antigate(object):
                        numeric=0, calc=0,
                        is_russian=0,
                        min_len=0, max_len=0,
-                       data_handler=None,
+                       handler=None,
                        extra_data=None):
         '''
             Отправка капчи на разгадывание
@@ -51,14 +51,16 @@ class Antigate(object):
         if not filename:
             raise Exception(u'Не указан файл капчи!')
 
-        if not data_handler:
+        if not handler:
             raise Exception(u'Обработчик капчи должен быть указан!')
 
         internal_data = dict(
             key=key,
             filename=filename,
-            data_handler=data_handler,
-            extra_data=extra_data
+            handler=ProcessItem(
+                handler=handler,
+                **extra_data
+            )
         )
 
         post = [
@@ -81,7 +83,7 @@ class Antigate(object):
             post=post,
             internal_data=internal_data,
             priority=1,
-            handler=('fetcher.utils.antigate', 'Antigate', '_send_result')
+            handler=cls._send_result
         )
 
     @classmethod
@@ -103,7 +105,7 @@ class Antigate(object):
                 ],
                 internal_data=task.internal_data,
                 priority=1,
-                handler=('fetcher.utils.antigate', 'Antigate', '_status')
+                handler=cls._status
             )
         except Exception:
             pass
@@ -131,9 +133,11 @@ class Antigate(object):
 
         logger.info(u'Результат разгадывания капчи: %s/%s' % (captcha, error))
 
-        yield DataItem(
-            handler=task.internal_data['data_handler'],
-            captcha=captcha,
-            error=error,
-            **task.internal_data['extra_data']
-        )
+        yield task.internal_data['handler']
+
+        #yield DataItem(
+        #    handler=task.internal_data['data_handler'],
+        #    captcha=captcha,
+        #    error=error,
+        #    **task.internal_data['extra_data']
+        #)
