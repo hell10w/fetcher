@@ -73,12 +73,12 @@ class Response(object):
                 logger.debug(u'Не построено тело ответа для %s' % self.url)
         return self._body
 
-    def dump_content(self, filename=None):
+    def dump_content(self, filename=None, suffix='.dat', prefix='response'):
         '''Сохраняет ответ сервера во временный файл или в файл с указанным именем'''
         if filename:
             f = open(filename, 'wb')
         else:
-            handle, filename = mkstemp()
+            handle, filename = mkstemp(suffix=suffix, prefix=prefix)
             f = fdopen(handle, 'wb')
         try:
             f.write(self.raw_content)

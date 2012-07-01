@@ -64,3 +64,21 @@ class CacheExtension(object):
         '''Сохраняет таск ответа на который небыло в кэше'''
         if not task.no_cache_store and self._backend:
             self._backend.set_to_cache(task, error)
+
+    def is_good_for_restore(self, task, error=None):
+        '''Годен ли таск для подмены из кэша'''
+        return not error and \
+               task.response and \
+               task.response.url and \
+               task.response.status_code == 200 and \
+               task.response.body and \
+               task.response.body.validate()
+
+    def is_good_for_store(self, task, error=None):
+        '''Годен ли таск для сохранения в кэш'''
+        return not error and \
+               task.response and \
+               task.response.url and \
+               task.response.status_code == 200 and \
+               task.response.body and \
+               task.response.body.validate()

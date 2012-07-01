@@ -56,9 +56,14 @@ class Task(Extensions):
         self.request.is_multipart_post = False
 
 
-class TaskResult(dict):
-    def __getattr__(self, name):
-        return self[name]
+class ProcessItem(object):
+    def __init__(self, handler, **kwargs):
+        self.handler = handler
+        self.kwargs = kwargs
+
+
+class DataItem(ProcessItem):
+    '''Элемент данных для отсылки обработчику'''
 
 
 class TasksGroup(object):
@@ -66,14 +71,23 @@ class TasksGroup(object):
 
     groups = {}
 
-    def __init__(self, task, urls, **kwarg):
+    class DotDict(dict):
+        def __getattr__(self, name):
+            return self[name]
+
+        def __setattr__(self, key, value):
+            self[key] = value
+
+    def __init__(self, base_task, load_urls, spider=None, **kwarg):
         TasksGroup.groups[id(self)] = self
 
-        self.task = task
-        self.count = len(urls)
-        self.urls = urls
-        self.errors = [None] * self.count
-        self.finished_tasks = [None] * self.count
+        self.spider = spider
+        self.task = base_task
+        self.load_urls = load_urls
+
+        self.__count = len(load_urls)
+        self.tasks = [TasksGroup.DotDict() for _ in range(self.__count)]
+
         self.setup(**kwarg)
 
     def __del__(self):
@@ -86,14 +100,40 @@ class TasksGroup(object):
 
     def produce_tasks(self):
         '''Генератор задач '''
-        for index, url in enumerate(self.urls):
+        for index, url in enumerate(self.load_urls):
             yield Task(
-                request=self.task.request.clone(
+                request=self.task.clone(
                     url=str(url)
                 ),
-                handler='group',
-                group=id(self),
-                index=index
+                handler=(__name__, 'TasksGroup', '_task_item'),
+                priority=1,
+                internal_data=TasksGroup.DotDict(
+                    group=id(self),
+                    index=index
+                )
+            )
+
+    @classmethod
+    def _task_item(cls, task, error=None):
+        '''Внутренний обработчик загрузки зачади из группы'''
+        internal_data = task.internal_data
+
+        group = TasksGroup.groups.get(internal_data.group, None)
+
+        item = group.tasks[internal_data.index]
+        item.task = task
+        item.error = error
+
+        group.__count -= 1
+
+        if not group.__count:
+            default_handler = group.spider.groups_collector
+            if not default_handler:
+                default_handler = (__name__, 'TasksGroup', 'groups_collector')
+
+            yield ProcessItem(
+                handler=getattr(group, 'handler', default_handler),
+                group=group
             )
 
 

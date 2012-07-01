@@ -1,37 +1,77 @@
 # -*- coding: utf-8 -*-
 
-from fetcher.tasks import Task
+from logging import getLogger
+
+from fetcher.tasks import Task, DataItem
 from fetcher.fetch.extensions import PostFile
 
 
+logger = getLogger('fetcher.antigate')
+
+
 class Antigate(object):
+    '''API для работы с antigate.com'''
+
     @classmethod
-    def send(cls, handler=None, key=None, filename=None,
-             phrase=False, regsense=False, numeric=False,
-             min_len=0, max_len=30):
+    def recognize(cls, key=None, filename=None,
+                       phrase=0, regsense=0,
+                       numeric=0, calc=0,
+                       is_russian=0,
+                       min_len=0, max_len=0,
+                       data_handler=None,
+                       extra_data=None):
+        '''
+            Отправка капчи на разгадывание
+
+            key - ключ к антигейту
+            filename - имя файла с капчей
+            data_handler - имя обработчика данных который получит ответ на капчу
+            extra_data - дополнительные пользовательские данные
+
+            Параметры для антигейта:
+            phrase => 0 или 1
+                (0 по умолчанию, 1 помечает что у капчи 2-4 слова)
+            regsense => 0 или 1
+                (0 по умолчанию, 1 помечает что текст капчи чувствителен к регистру) не работает?
+            numeric => 0 или 1 или 2
+                (0 по умолчанию, 1 помечает что текст капчи состоит только из цифр, 2 помечает что на капче нет цифр)
+            calc => 0 или 1
+                (0 по умолчанию, 1 помечает что цифры на капче должны быть сплюсованы)
+            min_len => 0..20
+                (0 по-умолчанию, помечает минимальную длину текста капчи)
+            max_len => 0..20
+                (0 - без ограничений, помечает максимальную длину капчи)
+            is_russian => 0 или 1 или 2
+                (0 по умолчанию, 1 помечает что вводить нужно только русский текст, 2 - русский или английский)
+        '''
+
         if not key:
             raise Exception(u'Ключ для Antigate должен быть указан!')
 
         if not filename:
             raise Exception(u'Не указан файл капчи!')
 
-        if not handler:
-            raise Exception(u'Обработчик задачи должен быть указан!')
+        if not data_handler:
+            raise Exception(u'Обработчик капчи должен быть указан!')
 
-        params = dict(
+        internal_data = dict(
             key=key,
-            filename=filename
+            filename=filename,
+            data_handler=data_handler,
+            extra_data=extra_data
         )
 
         post = [
             ('method', 'post'),
-            ('phrase', '1' if phrase else '0'),
-            ('regsense', '1' if regsense else '0'),
-            ('numeric', '1' if numeric else '0'),
+            ('phrase', str(phrase)),
+            ('regsense', str(regsense)),
+            ('numeric', str(numeric)),
             ('min_len', str(min_len)),
             ('max_len', str(max_len)),
-            ('key', params['key']),
-            ('file', PostFile(filename=params['filename']))
+            ('calc', str(calc)),
+            ('is_russian', str(is_russian)),
+            ('key', key),
+            ('file', PostFile(filename=filename))
         ]
 
         return Task(
@@ -39,42 +79,61 @@ class Antigate(object):
             method='POST',
             is_multipart_post=True,
             post=post,
-            internal_data=params,
-            handler=handler
+            internal_data=internal_data,
+            priority=1,
+            handler=('fetcher.utils.antigate', 'Antigate', '_send_result')
         )
 
     @classmethod
-    def send_handler(cls, task, error=None, handler=None):
-        if not handler:
-            raise Exception(u'Обработчик задачи должен быть указан!')
+    def _send_result(cls, task, error=None):
         if error or task.response.status_code != 200:
+            logger.error(u'Ошибка при отправке капчи!')
+            yield task
             return
         try:
             captcha_id = int(task.response.content.split('|')[1])
-            return Task(
+            logger.info(u'Капча отправлена - id %d!' % captcha_id)
+            task.internal_data.update(dict(captcha_id=captcha_id))
+            yield Task(
                 url='http://antigate.com/res.php',
                 post=[
                     ('key', task.internal_data['key']),
                     ('action', 'get'),
                     ('id', captcha_id)
                 ],
-                handler=handler
+                internal_data=task.internal_data,
+                priority=1,
+                handler=('fetcher.utils.antigate', 'Antigate', '_status')
             )
-        except:
+        except Exception:
             pass
 
     @classmethod
-    def state_handler(cls, task, error=None):
-        result, error_message = False, None
+    def _status(cls, task, error=None):
+        if error or task.response.status_code != 200:
+            yield task
+            return
 
-        if not error and task.response.status_code == 200:
-            content = task.response.content
+        content = task.response.content
 
-            if content != 'CAPCHA_NOT_READY':
-                content = content.split('|')
-                if len(content) == 2:
-                    result = content[1]
-                else:
-                    error_message = content[0]
+        if content == 'CAPCHA_NOT_READY':
+            logger.info(u'Капча %d не готова!' % task.internal_data['captcha_id'])
+            yield task
+            return
 
-        return (result, error_message)
+        captcha, error = None, None
+
+        content = content.split('|')
+        if len(content) == 2:
+            captcha = content[1]
+        else:
+            error = content[0]
+
+        logger.info(u'Результат разгадывания капчи: %s/%s' % (captcha, error))
+
+        yield DataItem(
+            handler=task.internal_data['data_handler'],
+            captcha=captcha,
+            error=error,
+            **task.internal_data['extra_data']
+        )
