@@ -57,10 +57,8 @@ class Antigate(object):
         internal_data = dict(
             key=key,
             filename=filename,
-            handler=ProcessItem(
-                handler=handler,
-                **extra_data
-            )
+            extra_data=extra_data,
+            handler=ProcessItem(handler=handler)
         )
 
         post = [
@@ -83,6 +81,8 @@ class Antigate(object):
             post=post,
             internal_data=internal_data,
             priority=1,
+            no_cache_store=True,
+            no_cache_restore=True,
             handler=cls._send_result
         )
 
@@ -92,10 +92,13 @@ class Antigate(object):
             logger.error(u'Ошибка при отправке капчи!')
             yield task
             return
+
         try:
             captcha_id = int(task.response.content.split('|')[1])
             logger.info(u'Капча отправлена - id %d!' % captcha_id)
-            task.internal_data.update(dict(captcha_id=captcha_id))
+
+            task.internal_data['captcha_id'] = captcha_id
+
             yield Task(
                 url='http://antigate.com/res.php',
                 post=[
@@ -105,8 +108,11 @@ class Antigate(object):
                 ],
                 internal_data=task.internal_data,
                 priority=1,
+                no_cache_store=True,
+                no_cache_restore=True,
                 handler=cls._status
             )
+
         except Exception:
             pass
 
@@ -133,11 +139,25 @@ class Antigate(object):
 
         logger.info(u'Результат разгадывания капчи: %s/%s' % (captcha, error))
 
-        yield task.internal_data['handler']
+        handler = task.internal_data.pop('handler')
+        handler.update(
+            captcha=captcha,
+            error=error,
+            data=task.internal_data,
+            no_cache_store=True,
+            no_cache_restore=True,
+            **task.internal_data.pop('extra_data', {})
+        )
 
-        #yield DataItem(
-        #    handler=task.internal_data['data_handler'],
-        #    captcha=captcha,
-        #    error=error,
-        #    **task.internal_data['extra_data']
-        #)
+        yield handler
+
+    @classmethod
+    def report_wrong(cls, data):
+        return Task(
+            url='http://antigate.com/res.php',
+            post=[
+                ('key', data['key']),
+                ('action', 'reportbad'),
+                ('id', data['captcha_id'])
+            ]
+        )

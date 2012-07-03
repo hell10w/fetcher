@@ -87,6 +87,9 @@ class ProcessItem(HandledObject):
         self.handler = handler
         self.kwargs = kwargs
 
+    def update(self, **kwargs):
+        self.kwargs.update(kwargs)
+
 
 class DataItem(ProcessItem):
     '''Элемент данных для отсылки обработчику'''
