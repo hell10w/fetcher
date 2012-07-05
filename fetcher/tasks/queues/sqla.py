@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from time import time, sleep
 from logging import getLogger
 from zlib import compress, decompress
 from cPickle import dumps, loads
 
-from sqlalchemy import create_engine, Column, Integer, BLOB
+from sqlalchemy import create_engine, Column, Integer, BLOB, not_
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -23,6 +24,7 @@ class QueueItem(Base):
 
     id = Column(Integer, primary_key=True)
 
+    timeon = Column(Integer)
     priority = Column(Integer)
     data = Column(BLOB)
 
@@ -45,16 +47,35 @@ class Queue(BaseQueue):
         return self.session.query(QueueItem).count()
 
     def get(self):
-        item = self.session.query(QueueItem).order_by(QueueItem.priority).first()
-        self.session.delete(item)
-        return item.priority, loads(decompress(item.data))
+        while self.size():
+            item = self.session.query(QueueItem).\
+                                filter(QueueItem.timeon <= time()).\
+                                order_by(QueueItem.priority).\
+                                first()
+
+            if not item:
+                item = self.session.query(QueueItem).\
+                                    filter_by(timeon=None).\
+                                    order_by(QueueItem.priority).\
+                                    first()
+            if item:
+                self.session.delete(item)
+                return item.priority, loads(decompress(item.data))
+
+            sleep(0.1)
 
     def put(self, item):
         priority, value = item[:2]
+
+        timeon = getattr(value, 'timeon', None)
+        if timeon:
+            timeon += time()
+
         self.session.add(
             QueueItem(
                 priority=priority,
-                data=compress(dumps(value))
+                data=compress(dumps(value)),
+                timeon=timeon
             )
         )
         self.session.commit()

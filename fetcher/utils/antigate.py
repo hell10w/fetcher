@@ -106,6 +106,7 @@ class Antigate(object):
                     ('action', 'get'),
                     ('id', captcha_id)
                 ],
+                timeon=5.0,
                 internal_data=task.internal_data,
                 priority=1,
                 no_cache_store=True,
